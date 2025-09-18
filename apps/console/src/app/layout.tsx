@@ -7,7 +7,12 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'GameTok Operator Console',
-  description: 'Monitor orchestration runs, blockers, and game experiments.'
+  description: 'Monitor orchestration runs, blockers, and game experiments.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.ico',
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

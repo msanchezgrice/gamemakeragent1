@@ -1,6 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "cd packages/schemas && pnpm build && cd ../utils && pnpm build && cd ../agents && pnpm build && cd ../../apps/console && pnpm build",
-  "outputDirectory": "apps/console/.next",
-  "installCommand": "pnpm install"
+  "builds": [
+    {
+      "src": "apps/console/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "buildCommand": "cd ../.. && pnpm install && pnpm run build:vercel && cd apps/console && pnpm run build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/apps/console/$1"
+    }
+  ]
 }
