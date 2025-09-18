@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "scope": "miguel-sanchezgrices-projects",
+  "builds": [
+    {
+      "src": "apps/console/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/apps/console/$1"
+    }
+  ]
+}
