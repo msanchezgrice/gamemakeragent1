@@ -1,6 +1,7 @@
 {
   "version": 2,
   "installCommand": "pnpm install",
-  "buildCommand": "cd packages/schemas && pnpm build && cd ../../apps/console && pnpm build",
-  "outputDirectory": "apps/console/.next"
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "apps/console/.next",
+  "framework": "nextjs"
 }
