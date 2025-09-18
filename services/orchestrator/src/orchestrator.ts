@@ -1,16 +1,14 @@
 import { nanoid } from 'nanoid';
 import { ThemeSynthesisAgent } from '@gametok/agents';
 import type { AgentContext } from '@gametok/agents';
-import {
-  intakeBrief,
-  manualTask,
-  manualTask
-} from '@gametok/schemas';
+import { intakeBrief, manualTask } from '@gametok/schemas';
 import type { IntakeBrief, ManualTask, RunRecord, RunPhase } from '@gametok/schemas';
 import { InMemoryNotifier, createLogger } from '@gametok/utils';
+import type { RunStore } from './store.js';
 
 interface OrchestratorOptions {
   notifier?: InMemoryNotifier;
+  store?: RunStore;
 }
 
 interface CreateRunInput {
@@ -23,31 +21,32 @@ interface AdvanceResult {
   createdTasks: ManualTask[];
 }
 
-type RunStoreRecord = RunRecord;
-
 export class OrchestratorService {
-  private runs = new Map<string, RunStoreRecord>();
   private readonly notifier: InMemoryNotifier;
   private readonly logger = createLogger({ scope: 'orchestrator' });
+  private readonly store: RunStore;
 
   constructor(options: OrchestratorOptions = {}) {
     this.notifier = options.notifier ?? new InMemoryNotifier();
+    if (!options.store) {
+      throw new Error('RunStore is required');
+    }
+    this.store = options.store;
   }
 
   listRuns() {
-    return Array.from(this.runs.values());
+    return this.store.listRuns();
   }
 
   getRun(id: string) {
-    return this.runs.get(id);
+    return this.store.getRun(id);
   }
 
-  createRun(input: CreateRunInput): RunRecord {
+  async createRun(input: CreateRunInput): Promise<RunRecord> {
     const brief = intakeBrief.parse(input.brief);
-    const id = nanoid();
     const now = new Date().toISOString();
     const run: RunRecord = {
-      id,
+      id: nanoid(),
       status: 'queued',
       phase: 'market',
       createdAt: now,
@@ -55,14 +54,13 @@ export class OrchestratorService {
       brief,
       blockers: []
     };
-    this.runs.set(id, run);
-    this.logger.info('Created run', { id });
+    await this.store.createRun(run);
+    this.logger.info('Created run', { id: run.id });
     return run;
   }
 
   async advance(runId: string): Promise<AdvanceResult> {
-    const run = this.runs.get(runId);
-    if (!run) throw new Error('Run not found');
+    const run = await this.requireRun(runId);
 
     const createdArtifacts: string[] = [];
     const createdTasks: ManualTask[] = [];
@@ -80,60 +78,64 @@ export class OrchestratorService {
         createdArtifacts.push(result.summaryPath);
         run.phase = 'prioritize';
         run.status = 'awaiting_human';
-        const task = this.createManualTask(run, 'portfolio_approval');
+        const task = await this.createManualTask(run, 'portfolio_approval');
         createdTasks.push(task);
-        this.pushBlocker(run, task);
         break;
       }
       case 'prioritize':
         run.phase = 'build';
         run.status = 'running';
+        run.updatedAt = new Date().toISOString();
+        await this.store.updateRun(run);
         break;
       case 'build': {
         run.phase = 'qa';
         run.status = 'awaiting_human';
-        const task = this.createManualTask(run, 'qa_verification');
+        const task = await this.createManualTask(run, 'qa_verification');
         createdTasks.push(task);
-        this.pushBlocker(run, task);
         break;
       }
       case 'qa': {
         run.phase = 'deploy';
         run.status = 'awaiting_human';
-        const task = this.createManualTask(run, 'deployment_upload');
+        const task = await this.createManualTask(run, 'deployment_upload');
         createdTasks.push(task);
-        this.pushBlocker(run, task);
         break;
       }
       case 'deploy':
         run.phase = 'measure';
         run.status = 'running';
+        run.updatedAt = new Date().toISOString();
+        await this.store.updateRun(run);
         break;
       case 'measure':
         run.phase = 'decision';
         run.status = 'running';
+        run.updatedAt = new Date().toISOString();
+        await this.store.updateRun(run);
         break;
       case 'decision':
         run.status = 'done';
+        run.updatedAt = new Date().toISOString();
+        await this.store.updateRun(run);
         break;
       default:
         break;
     }
 
-    run.updatedAt = new Date().toISOString();
-    this.runs.set(runId, run);
-    return { run, createdArtifacts, createdTasks };
+    const latestRun = await this.requireRun(runId);
+    return { run: latestRun, createdArtifacts, createdTasks };
   }
 
-  resolveTask(runId: string, taskId: string) {
-    const run = this.runs.get(runId);
-    if (!run) throw new Error('Run not found');
-    run.blockers = run.blockers.filter((task) => task.id !== taskId);
+  async resolveTask(runId: string, taskId: string) {
+    await this.store.completeManualTask(runId, taskId);
+    const run = await this.requireRun(runId);
     if (run.blockers.length === 0 && run.status === 'awaiting_human') {
       run.status = 'running';
+      run.updatedAt = new Date().toISOString();
+      await this.store.updateRun(run);
+      return this.requireRun(runId);
     }
-    run.updatedAt = new Date().toISOString();
-    this.runs.set(runId, run);
     return run;
   }
 
@@ -151,14 +153,13 @@ export class OrchestratorService {
         return { path, sha256 };
       },
       emitBlocker: async (blocker) => {
-        const task = this.createManualTask(run, blocker.blockerType);
-        this.pushBlocker(run, task);
+        const task = await this.createManualTask(run, blocker.blockerType);
         this.notifier.notify(blocker.title, task);
       }
     };
   }
 
-  private createManualTask(run: RunRecord, type: ManualTask['type']): ManualTask {
+  private async createManualTask(run: RunRecord, type: ManualTask['type']) {
     const task = manualTask.parse({
       id: nanoid(),
       runId: run.id,
@@ -168,12 +169,11 @@ export class OrchestratorService {
       description: this.taskDescription(type),
       createdAt: new Date().toISOString()
     });
-    return task;
-  }
-
-  private pushBlocker(run: RunRecord, task: ManualTask) {
+    await this.store.addManualTask(task);
     run.blockers = [...run.blockers.filter((existing) => existing.id !== task.id), task];
-    this.notifier.notify(`Action required: ${task.title}`, task);
+    run.updatedAt = new Date().toISOString();
+    await this.store.updateRun(run);
+    return task;
   }
 
   private taskTitle(type: ManualTask['type']) {
@@ -200,5 +200,11 @@ export class OrchestratorService {
       default:
         return 'Manual action required.';
     }
+  }
+
+  private async requireRun(runId: string) {
+    const run = await this.store.getRun(runId);
+    if (!run) throw new Error('Run not found');
+    return run;
   }
 }
