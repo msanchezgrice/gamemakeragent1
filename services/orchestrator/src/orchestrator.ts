@@ -1,4 +1,4 @@
-import { nanoid } from 'nanoid';
+import { v4 as uuidv4 } from 'uuid';
 import { ThemeSynthesisAgent } from '@gametok/agents';
 import type { AgentContext } from '@gametok/agents';
 import { intakeBrief, manualTask } from '@gametok/schemas';
@@ -46,7 +46,7 @@ export class OrchestratorService {
     const brief = intakeBrief.parse(input.brief);
     const now = new Date().toISOString();
     const run: RunRecord = {
-      id: nanoid(),
+      id: uuidv4(),
       status: 'queued',
       phase: 'market',
       createdAt: now,
@@ -142,13 +142,13 @@ export class OrchestratorService {
   private buildAgentContext(run: RunRecord): AgentContext {
     return {
       runId: run.id,
-      stepId: nanoid(),
+      stepId: uuidv4(),
       phase: run.phase as RunPhase,
       brief: run.brief,
       clock: () => new Date(),
       saveArtifact: async ({ kind, extension, data, meta }) => {
         const path = `artifacts/${run.id}/${kind}.${extension}`;
-        const sha256 = nanoid();
+        const sha256 = uuidv4();
         this.logger.info('Writing artifact', { path, meta, size: data instanceof Buffer ? data.byteLength : data.length });
         return { path, sha256 };
       },
@@ -161,7 +161,7 @@ export class OrchestratorService {
 
   private async createManualTask(run: RunRecord, type: ManualTask['type']) {
     const task = manualTask.parse({
-      id: nanoid(),
+      id: uuidv4(),
       runId: run.id,
       phase: run.phase,
       type,

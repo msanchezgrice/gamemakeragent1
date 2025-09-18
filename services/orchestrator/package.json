@@ -14,9 +14,11 @@
     "@gametok/agents": "workspace:*",
     "@gametok/schemas": "workspace:*",
     "@gametok/utils": "workspace:*",
+    "@types/uuid": "^11.0.0",
     "fastify": "^4.27.0",
     "fastify-plugin": "^4.5.1",
     "nanoid": "^5.0.6",
-    "postgres": "^3.4.3"
+    "postgres": "^3.4.3",
+    "uuid": "^13.0.0"
   }
 }
