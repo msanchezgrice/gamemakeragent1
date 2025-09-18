@@ -10,7 +10,7 @@ type RunWithMetrics = RunRecord & {
 
 const templateRuns: RunWithMetrics[] = [
   {
-    id: 'run-1',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     status: 'awaiting_human',
     phase: 'prioritize',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
@@ -23,8 +23,8 @@ const templateRuns: RunWithMetrics[] = [
     },
     blockers: [
       {
-        id: 'task-1',
-        runId: 'run-1',
+        id: '550e8400-e29b-41d4-a716-446655440011',
+        runId: '550e8400-e29b-41d4-a716-446655440001',
         phase: 'prioritize',
         type: 'portfolio_approval',
         title: 'Approve portfolio candidates',
@@ -37,7 +37,7 @@ const templateRuns: RunWithMetrics[] = [
     }
   },
   {
-    id: 'run-2',
+    id: '550e8400-e29b-41d4-a716-446655440002',
     status: 'running',
     phase: 'measure',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
@@ -56,7 +56,7 @@ const templateRuns: RunWithMetrics[] = [
     }
   },
   {
-    id: 'run-3',
+    id: '550e8400-e29b-41d4-a716-446655440003',
     status: 'awaiting_human',
     phase: 'deploy',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 54).toISOString(),
@@ -69,8 +69,8 @@ const templateRuns: RunWithMetrics[] = [
     },
     blockers: [
       {
-        id: 'task-3',
-        runId: 'run-3',
+        id: '550e8400-e29b-41d4-a716-446655440013',
+        runId: '550e8400-e29b-41d4-a716-446655440003',
         phase: 'deploy',
         type: 'deployment_upload',
         title: 'Upload bundle to Clipcade',
