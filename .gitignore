@@ -9,3 +9,4 @@ build
 coverage
 .next
 apps/console/.next
+.vercel

@@ -3,18 +3,16 @@
   "parserOptions": {
     "project": [
       "../../tsconfig.base.json",
-      "./tsconfig.json",
-      "../../packages/*/tsconfig.json"
+      "./tsconfig.json"
     ]
   },
   "settings": {
     "import/resolver": {
       "typescript": {
-        "project": [
-          "../../tsconfig.base.json",
-          "./tsconfig.json",
-          "../../packages/*/tsconfig.json"
-        ]
+        "project": "./tsconfig.json"
+      },
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
       }
     }
   }

@@ -7,7 +7,7 @@
         "./src/*"
       ],
       "@gametok/*": [
-        "./packages/*/src"
+        "../../packages/*/src"
       ]
     },
     "types": [
