@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "./node_modules/.bin/tsc -p tsconfig.json",
+    "build": "pnpm exec tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest"
   },
