@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "apps/console/.next",
-  "framework": "nextjs"
+  "buildCommand": "cd ../.. && pnpm install && pnpm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "rootDirectory": "apps/console"
 }
