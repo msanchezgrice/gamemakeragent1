@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build:vercel && cd apps/console && pnpm run build",
+  "buildCommand": "cd packages/schemas && pnpm build && cd ../utils && pnpm build && cd ../agents && pnpm build && cd ../../apps/console && pnpm build",
   "outputDirectory": "apps/console/.next",
   "installCommand": "pnpm install"
 }
