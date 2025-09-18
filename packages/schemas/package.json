@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "files": ["dist"],
   "scripts": {
-    "build": "npx tsc -p tsconfig.json",
+    "build": "./node_modules/.bin/tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest"
   },
