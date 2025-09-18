@@ -1,0 +1,20 @@
+{
+  "name": "services-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/devServer.ts",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@gametok/agents": "workspace:*",
+    "@gametok/schemas": "workspace:*",
+    "@gametok/utils": "workspace:*",
+    "fastify": "^4.27.0",
+    "fastify-plugin": "^4.5.1"
+  }
+}

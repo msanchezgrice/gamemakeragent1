@@ -1,0 +1,12 @@
+{
+  "name": "@gametok/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-placeholder.js",
+    "build": "echo 'TODO: implement console build'",
+    "lint": "echo 'TODO: lint console'",
+    "test": "vitest || true"
+  }
+}
