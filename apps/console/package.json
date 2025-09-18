@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "vercel-build": "cd ../.. && pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && cd apps/console && next build"
+    "vercel-build": "cd ../.. && pnpm run build:vercel && cd apps/console && next build"
   },
   "dependencies": {
     "@gametok/schemas": "workspace:*",

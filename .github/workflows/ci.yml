@@ -28,12 +28,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build dependencies
-        run: |
-          pnpm --filter @gametok/schemas build
-          pnpm --filter @gametok/utils build
-          pnpm --filter @gametok/agents build
-
       - name: Run lint
         run: pnpm lint
 
