@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && cd apps/console && pnpm build",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile"
+}
