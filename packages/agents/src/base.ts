@@ -15,7 +15,7 @@ export interface AgentContext {
 export interface AgentArtifactInput {
   kind: string;
   extension: 'json' | 'md';
-  data: string | Buffer;
+  data: string | Uint8Array;
   meta?: Record<string, unknown>;
 }
 
