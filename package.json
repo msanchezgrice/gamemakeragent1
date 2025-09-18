@@ -6,7 +6,7 @@
   "packageManager": "pnpm@8.15.4",
   "scripts": {
     "build": "pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && pnpm --filter @gametok/console build",
-    "build:vercel": "PATH=$PATH:./node_modules/.bin pnpm --filter @gametok/schemas build && PATH=$PATH:./node_modules/.bin pnpm --filter @gametok/utils build && PATH=$PATH:./node_modules/.bin pnpm --filter @gametok/agents build",
+    "build:vercel": "npx tsc -p packages/schemas/tsconfig.json --outDir packages/schemas/dist && npx tsc -p packages/utils/tsconfig.json --outDir packages/utils/dist && npx tsc -p packages/agents/tsconfig.json --outDir packages/agents/dist && npx tsc -p packages/experiment/tsconfig.json --outDir packages/experiment/dist && npx tsc -p packages/game-adapter/tsconfig.json --outDir packages/game-adapter/dist",
     "build:all": "pnpm -r run build",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
