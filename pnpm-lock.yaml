@@ -146,6 +146,9 @@ importers:
       nanoid:
         specifier: ^5.0.6
         version: 5.1.5
+      postgres:
+        specifier: ^3.4.3
+        version: 3.4.7
 
 packages:
 
@@ -3913,7 +3916,6 @@ packages:
   /postgres@3.4.7:
     resolution: {integrity: sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==}
     engines: {node: '>=12'}
-    dev: true
 
   /prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "apps/console/package.json", "use": "@vercel/next" }
-  ]
+  "installCommand": "pnpm install",
+  "buildCommand": "cd packages/schemas && pnpm build && cd ../../apps/console && pnpm build",
+  "outputDirectory": "apps/console/.next"
 }
