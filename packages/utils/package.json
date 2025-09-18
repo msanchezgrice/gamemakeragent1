@@ -15,5 +15,8 @@
   "dependencies": {
     "nanoid": "^5.0.6",
     "@gametok/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
   }
 }

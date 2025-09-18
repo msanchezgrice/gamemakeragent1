@@ -13,5 +13,8 @@
   "dependencies": {
     "@gametok/schemas": "workspace:*",
     "@gametok/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
   }
 }
