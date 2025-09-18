@@ -27,9 +27,16 @@ The orchestrator emits notifications through the operator console inbox; no exte
 1. Install pnpm `>=8.15`.
 2. Copy `.env.example` to `.env` (root) and populate values.
 3. Run `pnpm install`.
-4. For the operator console: `pnpm dev:console`. For the orchestrator: `pnpm dev:orchestrator`.
+4. Use the commands below for local development.
 
 Local execution is optional; CI and GitHub deployments can execute the same commands in Vercel/Supabase backed environments.
+## Local Commands
+
+- `pnpm dev:orchestrator` – starts the Fastify dev server on port 3333.
+- `pnpm dev:console` – launches the Next.js operator console (set `NEXT_PUBLIC_ORCHESTRATOR_URL`).
+- `pnpm db:migrate` – applies SQL migrations against the configured `DATABASE_URL`.
+
+Set `NEXT_PUBLIC_ORCHESTRATOR_URL` to the orchestrator endpoint when deploying the console via Vercel; omit it locally to use mock data.
 
 ## Status
 

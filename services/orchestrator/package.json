@@ -15,6 +15,7 @@
     "@gametok/schemas": "workspace:*",
     "@gametok/utils": "workspace:*",
     "fastify": "^4.27.0",
-    "fastify-plugin": "^4.5.1"
+    "fastify-plugin": "^4.5.1",
+    "nanoid": "^5.0.6"
   }
 }

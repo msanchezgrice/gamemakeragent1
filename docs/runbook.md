@@ -35,3 +35,11 @@ curl -X POST http://localhost:3333/runs \
 # Advance a run (respects blockers)
 curl -X POST http://localhost:3333/runs/<runId>/advance
 ```
+
+## Database
+
+Run migrations locally (requires `DATABASE_URL`):
+
+```
+pnpm db:migrate
+```
