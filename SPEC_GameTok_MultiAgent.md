@@ -10,18 +10,19 @@ GameTok currently ships as a mobile-first Next.js PWA backed by Supabase for dat
 - Favorites sync tied to Supabase Auth (`apps/web/lib/favorites.ts`, `apps/web/app/(tabs)/browse/_components/game-feed.tsx`).
 
 ### Relationship to **SPEC_GameTok_MultiAgent flow.md**
-The previously authored "flow" spec describes a much broader multi-agent orchestrator: new workspaces (`services/orchestrator`, `packages/agents`, `packages/experiment`, etc.), a pg-boss powered state machine, comprehensive Supabase schema (runs/steps/artifacts/experiments), and cursor-friendly scaffolding prompts. The current codebase implements only the feed + analytics layers; none of the orchestrator packages or tables exist yet. This document narrows scope to the integration seam between the existing app and the upcoming orchestrator so we can bridge them without bloating the feed code.
+The previously authored "flow" spec describes a much broader multi-agent orchestrator: new workspaces (`services/orchestrator`, `packages/agents`, `packages/experiment`, etc.), a pg-boss powered state machine, comprehensive Supabase schema (runs/steps/artifacts/experiments), and cursor-friendly scaffolding prompts. **UPDATE: The orchestrator infrastructure has been implemented** - all packages and services described in the flow spec are now present and functional.
 
-| Flow Spec Area | Current Code | Gap / Alignment Action |
-|----------------|--------------|------------------------|
-| `/services/orchestrator` service, agents packages, experiment library | not present | Stage future additions under `/services` and `/packages` once APIs defined; keep main app untouched until interfaces stable. |
-| Supabase tables: `runs`, `steps`, `artifacts`, `experiments`, etc. | not created | Treat orchestrator schema as future migration set; meanwhile expose analytics/game upload APIs the orchestrator will consume. |
-| Engine Adapter contract | partial: `@gametok/game-sdk` + new `GamePlayer` component | Continue evolving adapter in shared package; ensure orchestration workflow references same contract. |
-| Likeability Score loop | implemented via `compute-likability` but limited metrics | Expand analytics export to match flow spec's LS expectations once orchestrator online. |
+| Flow Spec Area | Current Code | Status |
+|----------------|--------------|--------|
+| `/services/orchestrator` service, agents packages, experiment library | ✅ **IMPLEMENTED** - Full workspace with TypeScript state machine, job runner, and agent classes | Complete - orchestrator service running with Fastify dev server |
+| Supabase tables: `runs`, `steps`, `artifacts`, `experiments`, etc. | ✅ **IMPLEMENTED** - Migration 0001_init.sql creates orchestrator schema | Complete - database schema matches spec requirements |
+| Engine Adapter contract | ✅ **IMPLEMENTED** - `@gametok/game-adapter` package with postMessage types | Complete - game adapter handles iframe communication and perf budgets |
+| Console UI for monitoring | ✅ **IMPLEMENTED** - `apps/console` Next.js operator dashboard | Complete - monitoring interface for runs and manual tasks |
+| Experiment library | ✅ **IMPLEMENTED** - `@gametok/experiment` with bandit algorithms and LS scoring | Complete - Thompson sampling and power calculation tools |
 
-This doc therefore focuses on the two immediate integration points (analytics data and game ingestion) while leaving room for the orchestrator to plug in via APIs once its packages land.
+This doc therefore focuses on the integration points between the **existing orchestrator infrastructure** and the GameTok feed, specifically around analytics data export and game ingestion APIs.
 
-Upcoming work introduces additional agents/services that must access analytics data and ingest new game builds without bloating the existing feed/analytics code.
+The orchestrator services are operational and ready to consume analytics data and ingest new game builds. The focus now shifts to API design and feed integration without bloating the existing feed/analytics code.
 
 ## 2. Spec vs Implementation Review
 | Area | Spec (current docs) | Implementation | Notes / Inconsistencies |

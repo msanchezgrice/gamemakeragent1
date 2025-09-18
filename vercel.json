@@ -1,8 +1,6 @@
 {
   "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "cd apps/console && npm run vercel-build",
+  "buildCommand": "pnpm run build:vercel && cd apps/console && pnpm run build",
   "outputDirectory": "apps/console/.next",
-  "installCommand": "pnpm install",
-  "rootDirectory": "apps/console"
+  "installCommand": "pnpm install"
 }
