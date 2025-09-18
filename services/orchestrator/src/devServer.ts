@@ -1,28 +1,31 @@
 import Fastify from 'fastify';
 import { OrchestratorService } from './orchestrator.js';
+import type { IntakeBrief } from '@gametok/schemas';
 
 const fastify = Fastify({ logger: true });
 const orchestrator = new OrchestratorService();
 
-fastify.post('/runs', async (request, reply) => {
+type RunParams = { id: string };
+type RunTaskParams = { id: string; taskId: string };
+type CreateRunBody = { brief: IntakeBrief };
+
+fastify.post<{ Body: CreateRunBody }>('/runs', async (request, reply) => {
   const run = orchestrator.createRun({
-    brief: (request.body as any).brief
+    brief: request.body.brief
   });
   return reply.code(201).send(run);
 });
 
-fastify.get('/runs', async () => {
-  return orchestrator.listRuns();
-});
+fastify.get('/runs', async () => orchestrator.listRuns());
 
-fastify.get('/runs/:id', async (request, reply) => {
-  const run = orchestrator.getRun((request.params as any).id);
+fastify.get<{ Params: RunParams }>('/runs/:id', async (request, reply) => {
+  const run = orchestrator.getRun(request.params.id);
   if (!run) return reply.code(404).send({ error: 'Not found' });
   return run;
 });
 
-fastify.post('/runs/:id/advance', async (request, reply) => {
-  const { id } = request.params as any;
+fastify.post<{ Params: RunParams }>('/runs/:id/advance', async (request, reply) => {
+  const { id } = request.params;
   try {
     const result = await orchestrator.advance(id);
     return result;
@@ -32,8 +35,8 @@ fastify.post('/runs/:id/advance', async (request, reply) => {
   }
 });
 
-fastify.post('/runs/:id/tasks/:taskId/resolve', async (request, reply) => {
-  const { id, taskId } = request.params as any;
+fastify.post<{ Params: RunTaskParams }>('/runs/:id/tasks/:taskId/resolve', async (request, reply) => {
+  const { id, taskId } = request.params;
   try {
     const run = orchestrator.resolveTask(id, taskId);
     return run;

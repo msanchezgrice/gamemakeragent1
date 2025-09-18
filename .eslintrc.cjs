@@ -17,5 +17,12 @@ module.exports = {
     node: true,
     es2022: true
   },
+  settings: {
+    'import/resolver': {
+      typescript: {
+        project: ['tsconfig.base.json', 'packages/*/tsconfig.json', 'services/*/tsconfig.json', 'apps/*/tsconfig.json']
+      }
+    }
+  },
   ignorePatterns: ['dist', 'build']
 };

@@ -1,9 +1,10 @@
+import type { AgentArtifactInput } from './base.js';
 import { describe, expect, it } from 'vitest';
 import { ThemeSynthesisAgent } from './themeAgent.js';
 
 describe('ThemeSynthesisAgent', () => {
   it('produces markdown artifact', async () => {
-    const saved: any[] = [];
+    const saved: AgentArtifactInput[] = [];
     const output = await ThemeSynthesisAgent.run(
       { theme: 'neon runners', targetGameTypes: ['runner'] },
       {

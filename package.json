@@ -21,6 +21,7 @@
     "tsx": "^4.7.1",
     "typescript": "^5.4.5",
     "vitest": "^1.5.0",
-    "postgres": "^3.4.3"
+    "postgres": "^3.4.3",
+    "eslint-import-resolver-typescript": "^3.5.6"
   }
 }

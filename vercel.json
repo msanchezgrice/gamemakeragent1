@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm --filter @gametok/console build",
+  "installCommand": "pnpm install",
+  "builds": [
+    { "src": "apps/console/next.config.mjs", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "apps/console/$1" }
+  ]
+}

@@ -4,8 +4,7 @@ import type { AgentContext } from '@gametok/agents';
 import {
   intakeBrief,
   manualTask,
-  manualTaskType,
-  runRecord
+  manualTask
 } from '@gametok/schemas';
 import type { IntakeBrief, ManualTask, RunRecord, RunPhase } from '@gametok/schemas';
 import { InMemoryNotifier, createLogger } from '@gametok/utils';
