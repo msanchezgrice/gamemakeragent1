@@ -9,7 +9,6 @@
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,
-    "types": ["vitest"],
     "jsx": "react-jsx"
   }
 }
