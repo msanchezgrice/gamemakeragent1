@@ -1,6 +1,0 @@
-{
-  "framework": null,
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && cd apps/console && next build",
-  "outputDirectory": ".next"
-}
