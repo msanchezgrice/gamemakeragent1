@@ -2,6 +2,7 @@
 // import { runRecord } from '@gametok/schemas';
 import { mockRuns } from './mock-data';
 import { supabase } from './supabase';
+import type { RunRecord } from '@gametok/schemas';
 
 const orchestratorBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1/orchestrator-api'
@@ -71,20 +72,20 @@ export async function loadRuns() {
   }
 }
 
-function transformSupabaseRuns(runs: unknown[]) {
+function transformSupabaseRuns(runs: unknown[]): RunRecord[] {
   console.log('🔧 transformSupabaseRuns: Processing', runs.length, 'runs');
   
-  return runs.map((run: Record<string, unknown>, index) => {
+  return runs.map((run: any, index) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.log(`🔧 Transform run ${index}:`, run.id, run.brief?.theme || 'No theme');
     
-    const transformedRun = {
-      id: run.id,
-      status: run.status,
-      phase: run.phase,
-      createdAt: run.created_at,
-      updatedAt: run.updated_at,
-      brief: run.brief,
-      blockers: ((run.blockers as unknown[]) || []).map((task: Record<string, unknown>) => ({
+    const transformedRun: RunRecord = {
+      id: run.id as string,
+      status: run.status as RunRecord['status'],
+      phase: run.phase as RunRecord['phase'],
+      createdAt: run.created_at as string,
+      updatedAt: run.updated_at as string,
+      brief: run.brief as RunRecord['brief'],
+      blockers: (run.blockers || []).map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
         id: task.id,
         runId: task.run_id,
         phase: task.phase as 'prioritize',
