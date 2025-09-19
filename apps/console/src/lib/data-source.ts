@@ -1,65 +1,91 @@
 import { z } from 'zod';
 import { runRecord } from '@gametok/schemas';
 import { mockRuns } from './mock-data';
+import { supabase, type DatabaseRun, type DatabaseTask } from './supabase';
 
-const runsResponse = z.object({ runs: z.array(runRecord) });
-
-const orchestratorBaseUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL;
+// const runsResponse = z.object({ runs: z.array(runRecord) });
+// const orchestratorBaseUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL;
 
 export async function loadRuns() {
-  if (!orchestratorBaseUrl) {
-    return mockRuns;
-  }
-
   try {
-    const response = await fetch(`${orchestratorBaseUrl}/runs`, {
-      cache: 'no-store'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch runs (${response.status})`);
+    // First try to load from Supabase
+    const { data: runs, error } = await supabase
+      .from('orchestrator_runs')
+      .select(`
+        *,
+        blockers:orchestrator_manual_tasks(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return mockRuns;
     }
-    const json = await response.json();
-    const parsed = runsResponse.safeParse({ runs: json });
-    if (!parsed.success) {
-      throw parsed.error;
+
+    if (!runs || runs.length === 0) {
+      console.log('No runs in database, using mock data');
+      return mockRuns;
     }
-    return parsed.data.runs;
+
+    // Transform database format to our schema format
+    const transformedRuns = runs.map((run: DatabaseRun & { blockers: DatabaseTask[] }) => ({
+      id: run.id,
+      status: run.status,
+      phase: run.phase,
+      createdAt: run.created_at,
+      updatedAt: run.updated_at,
+      brief: run.brief as any,
+      blockers: run.blockers.map(task => ({
+        id: task.id,
+        runId: task.run_id,
+        phase: task.phase as 'prioritize', // Type assertion for now
+        type: task.task_type,
+        title: task.title,
+        description: task.description,
+        createdAt: task.created_at,
+        dueAt: task.due_at,
+        completedAt: task.completed_at,
+        assignee: task.assignee
+      }))
+    }));
+
+    return transformedRuns;
   } catch (error) {
-    console.error('Failed to load runs from orchestrator', error);
+    console.error('Failed to load runs from Supabase:', error);
     return mockRuns;
   }
 }
 
 export async function createRun(brief: unknown) {
-  if (!orchestratorBaseUrl) {
-    // Mock creation - add to local storage or return mock ID
-    const mockRun = {
-      id: `mock-${Date.now()}`,
-      status: 'queued' as const,
-      phase: 'intake' as const,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      brief,
+  try {
+    // Insert into Supabase
+    const { data: run, error } = await supabase
+      .from('orchestrator_runs')
+      .insert({
+        brief,
+        status: 'queued',
+        phase: 'intake'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error creating run:', error);
+      throw new Error('Failed to create run in database');
+    }
+
+    // Transform to our schema format
+    const transformedRun = {
+      id: run.id,
+      status: run.status,
+      phase: run.phase,
+      createdAt: run.created_at,
+      updatedAt: run.updated_at,
+      brief: run.brief as any,
       blockers: []
     };
-    console.log('Mock run created:', mockRun);
-    return mockRun;
-  }
 
-  try {
-    const response = await fetch(`${orchestratorBaseUrl}/runs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ brief })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create run (${response.status})`);
-    }
-    
-    return await response.json();
+    return transformedRun;
   } catch (error) {
     console.error('Failed to create run:', error);
     throw error;
@@ -67,21 +93,24 @@ export async function createRun(brief: unknown) {
 }
 
 export async function advanceRun(runId: string) {
-  if (!orchestratorBaseUrl) {
-    console.log('Mock advance run:', runId);
-    return { success: true };
-  }
-
   try {
-    const response = await fetch(`${orchestratorBaseUrl}/runs/${runId}/advance`, {
-      method: 'POST'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to advance run (${response.status})`);
+    // Update run status in Supabase
+    const { data: run, error } = await supabase
+      .from('orchestrator_runs')
+      .update({
+        status: 'running',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', runId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error advancing run:', error);
+      throw new Error('Failed to advance run in database');
     }
-    
-    return await response.json();
+
+    return { success: true, run };
   } catch (error) {
     console.error('Failed to advance run:', error);
     throw error;
@@ -89,21 +118,24 @@ export async function advanceRun(runId: string) {
 }
 
 export async function completeTask(taskId: string) {
-  if (!orchestratorBaseUrl) {
-    console.log('Mock complete task:', taskId);
-    return { success: true };
-  }
-
   try {
-    const response = await fetch(`${orchestratorBaseUrl}/tasks/${taskId}/complete`, {
-      method: 'POST'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to complete task (${response.status})`);
+    // Mark task as completed in Supabase
+    const { data: task, error } = await supabase
+      .from('orchestrator_manual_tasks')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error completing task:', error);
+      throw new Error('Failed to complete task in database');
     }
-    
-    return await response.json();
+
+    return { success: true, task };
   } catch (error) {
     console.error('Failed to complete task:', error);
     throw error;
