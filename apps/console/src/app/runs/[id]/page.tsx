@@ -1,27 +1,85 @@
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { loadRuns } from '../../../lib/data-source';
 import { withMetrics } from '../../../lib/mock-data';
 import { RunTimeline } from './components/run-timeline';
 import { RunTabs } from './components/run-tabs';
+import { TimelineSkeleton } from '../../../components/skeleton';
+import type { RunRecord } from '@gametok/schemas';
 
-interface RunDetailPageProps {
-  params: { id: string };
-}
-
-export default async function RunDetailPage({ params }: RunDetailPageProps) {
-  console.log('🔍 RunDetailPage: Loading run with ID:', params.id);
+export default function RunDetailPage() {
+  const params = useParams();
+  const runId = params.id as string;
   
-  const runs = withMetrics(await loadRuns());
-  console.log('🔍 RunDetailPage: Total runs loaded:', runs.length);
-  console.log('🔍 RunDetailPage: Available run IDs:', runs.map(r => r.id));
-  
-  const run = runs.find((r) => r.id === params.id);
-  console.log('🔍 RunDetailPage: Found run:', !!run);
+  const [run, setRun] = useState<(RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!run) {
-    console.error('❌ RunDetailPage: Run not found for ID:', params.id);
-    console.log('📋 Available runs:', runs.map(r => ({ id: r.id, theme: r.brief.theme })));
-    notFound();
+  useEffect(() => {
+    async function fetchRun() {
+      console.log('🔍 RunDetailPage: Loading run with ID:', runId);
+      
+      try {
+        const runs = withMetrics(await loadRuns());
+        console.log('🔍 RunDetailPage: Total runs loaded:', runs.length);
+        console.log('🔍 RunDetailPage: Available run IDs:', runs.map(r => r.id));
+        
+        const foundRun = runs.find((r) => r.id === runId);
+        console.log('🔍 RunDetailPage: Found run:', !!foundRun);
+
+        if (!foundRun) {
+          console.error('❌ RunDetailPage: Run not found for ID:', runId);
+          console.log('📋 Available runs:', runs.map(r => ({ id: r.id, theme: r.brief.theme })));
+          setNotFound(true);
+        } else {
+          console.log('✅ RunDetailPage: Setting run data:', foundRun.brief.theme);
+          setRun(foundRun);
+        }
+      } catch (error) {
+        console.error('❌ RunDetailPage: Error loading runs:', error);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRun();
+  }, [runId]);
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-7xl px-8 py-12">
+        <div className="grid gap-8 lg:grid-cols-[350px,1fr]">
+          <TimelineSkeleton />
+          <div className="rounded-3xl border border-slate-800/70 bg-surface/70 backdrop-blur p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-6 bg-slate-700 rounded w-1/3"></div>
+              <div className="h-4 bg-slate-700 rounded w-2/3"></div>
+              <div className="h-32 bg-slate-700 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (notFound || !run) {
+    return (
+      <main className="mx-auto max-w-7xl px-8 py-12">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-semibold text-white mb-4">Run Not Found</h1>
+          <p className="text-slate-400 mb-6">The requested run could not be found.</p>
+          <a
+            href="/"
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Back to Dashboard
+          </a>
+        </div>
+      </main>
+    );
   }
 
   console.log('✅ RunDetailPage: Rendering run:', run.brief.theme);
