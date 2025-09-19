@@ -49,7 +49,7 @@ export default function RunDetailPage() {
             createdAt: directRun.created_at,
             updatedAt: directRun.updated_at,
             brief: directRun.brief,
-            blockers: (directRun.blockers || []).map((task: any) => ({
+            blockers: (directRun.blockers || []).map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
               id: task.id,
               runId: task.run_id,
               phase: task.phase,
