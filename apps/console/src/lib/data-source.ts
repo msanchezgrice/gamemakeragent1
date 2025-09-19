@@ -1,7 +1,7 @@
 // import { z } from 'zod';
 // import { runRecord } from '@gametok/schemas';
 import { mockRuns } from './mock-data';
-import { supabase, type DatabaseRun, type DatabaseTask } from './supabase';
+import { supabase } from './supabase';
 
 const orchestratorBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1/orchestrator-api'
@@ -71,10 +71,10 @@ export async function loadRuns() {
   }
 }
 
-function transformSupabaseRuns(runs: any[]) {
+function transformSupabaseRuns(runs: unknown[]) {
   console.log('🔧 transformSupabaseRuns: Processing', runs.length, 'runs');
   
-  return runs.map((run, index) => {
+  return runs.map((run: any, index) => {
     console.log(`🔧 Transform run ${index}:`, run.id, run.brief?.theme || 'No theme');
     
     const transformedRun = {
