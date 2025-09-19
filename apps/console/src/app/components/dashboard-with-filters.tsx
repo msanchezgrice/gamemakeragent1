@@ -18,6 +18,9 @@ interface DashboardWithFiltersProps {
 }
 
 export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
+  console.log('🎯 DashboardWithFilters: Received runs:', runs.length);
+  console.log('🎯 DashboardWithFilters: Run themes:', runs.map(r => r.brief?.theme || 'No theme'));
+  
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<RunFilters>({
     search: '',
@@ -28,7 +31,8 @@ export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
 
   // Filter runs based on current filters
   const filteredRuns = useMemo(() => {
-    return runs.filter((run) => {
+    console.log('🔄 DashboardWithFilters: Filtering runs, input count:', runs.length);
+    const filtered = runs.filter((run) => {
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
@@ -56,6 +60,8 @@ export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
 
       return true;
     });
+    console.log('🔄 DashboardWithFilters: Filtered result count:', filtered.length);
+    return filtered;
   }, [runs, filters]);
 
   const awaiting = filteredRuns.filter((run) => run.status === 'awaiting_human');

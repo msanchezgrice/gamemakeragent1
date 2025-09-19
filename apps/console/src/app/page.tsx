@@ -10,23 +10,33 @@ import type { RunRecord } from '@gametok/schemas';
 export default function DashboardPage() {
   const [runs, setRuns] = useState<Array<RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }>>([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+
+  const fetchRuns = async () => {
+    console.log('🏠 Dashboard: Loading runs...');
+    setLoading(true);
+    try {
+      const fetchedRuns = withMetrics(await loadRuns());
+      console.log('🏠 Dashboard: Loaded runs count:', fetchedRuns.length);
+      console.log('🏠 Dashboard: Run themes:', fetchedRuns.map(r => r.brief.theme));
+      console.log('🏠 Dashboard: Setting runs state with:', fetchedRuns);
+      setRuns(fetchedRuns);
+      setLastRefresh(Date.now());
+    } catch (error) {
+      console.error('❌ Dashboard: Failed to load runs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchRuns() {
-      console.log('🏠 Dashboard: Loading runs...');
-      try {
-        const fetchedRuns = withMetrics(await loadRuns());
-        console.log('🏠 Dashboard: Loaded runs count:', fetchedRuns.length);
-        console.log('🏠 Dashboard: Run themes:', fetchedRuns.map(r => r.brief.theme));
-        setRuns(fetchedRuns);
-      } catch (error) {
-        console.error('❌ Dashboard: Failed to load runs:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchRuns();
+  }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchRuns, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -41,6 +51,22 @@ export default function DashboardPage() {
     );
   }
   
-  return <DashboardWithFilters runs={runs} />;
+  return (
+    <div>
+      <div className="mx-auto max-w-7xl px-8 pt-4">
+        <button
+          onClick={fetchRuns}
+          disabled={loading}
+          className="mb-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </button>
+        <div className="text-xs text-slate-400">
+          Last refresh: {new Date(lastRefresh).toLocaleTimeString()} | Runs in state: {runs.length}
+        </div>
+      </div>
+      <DashboardWithFilters runs={runs} />
+    </div>
+  );
 }
 
