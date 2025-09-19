@@ -57,7 +57,7 @@ export default function DebugPage() {
       
     } catch (error) {
       console.error('❌ Edge Function test failed:', error);
-      setTestResults({ error: error.message });
+      setTestResults({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   };
 
