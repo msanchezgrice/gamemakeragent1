@@ -3,16 +3,7 @@
   "builds": [
     {
       "src": "apps/console/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "apps/console/$1"
+      "use": "@vercel/next"
     }
   ]
 }
