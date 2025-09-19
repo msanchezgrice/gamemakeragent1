@@ -9,7 +9,13 @@ import {
   Target, 
   DollarSign, 
   Clock,
-  Sparkles
+  Sparkles,
+  Search,
+  Users,
+  Database,
+  BarChart,
+  Globe,
+  Zap
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -18,6 +24,23 @@ interface IntakeBrief {
   targetAudience: string;
   goal: string;
   theme: string;
+  competitorAnalysis: {
+    enabled: boolean;
+    competitors: string[];
+    focusAreas: string[];
+  };
+  webResearch: {
+    enabled: boolean;
+    sources: string[];
+    keywords: string[];
+  };
+  dataSources: {
+    appStore: boolean;
+    playStore: boolean;
+    steamCharts: boolean;
+    socialMedia: boolean;
+    gameAnalytics: boolean;
+  };
   constraints: {
     maxTokens?: number;
     budgetUsd?: number;
@@ -32,6 +55,23 @@ export default function NewRunPage() {
     targetAudience: '',
     goal: '',
     theme: '',
+    competitorAnalysis: {
+      enabled: false,
+      competitors: [],
+      focusAreas: []
+    },
+    webResearch: {
+      enabled: true,
+      sources: ['App Store', 'Google Play', 'Steam'],
+      keywords: []
+    },
+    dataSources: {
+      appStore: true,
+      playStore: true,
+      steamCharts: false,
+      socialMedia: true,
+      gameAnalytics: false
+    },
     constraints: {}
   });
 
