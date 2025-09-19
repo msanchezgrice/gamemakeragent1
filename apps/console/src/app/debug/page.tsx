@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 
 export default function DebugPage() {
-  const [debugInfo, setDebugInfo] = useState<any>({});
-  const [testResults, setTestResults] = useState<any>({});
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown>>({});
+  const [testResults, setTestResults] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     const info = {
