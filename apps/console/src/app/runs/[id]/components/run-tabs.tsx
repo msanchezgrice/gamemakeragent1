@@ -13,6 +13,7 @@ import {
   User,
   CheckCircle
 } from 'lucide-react';
+import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
 
 interface RunTabsProps {
@@ -86,21 +87,88 @@ export function RunTabs({ run }: RunTabsProps) {
 }
 
 function SummaryTab({ run }: { run: RunRecord }) {
+  const isAwaitingHuman = run.status === 'awaiting_human';
+  const isRunning = run.status === 'running';
+  
   return (
     <div className="space-y-6">
+      {/* Status Banner */}
+      {isAwaitingHuman && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl border border-warning/40 bg-warning/10 flex items-center gap-3"
+        >
+          <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
+            <User className="h-4 w-4 text-warning" />
+          </div>
+          <div>
+            <h4 className="font-medium text-warning">Human Approval Required</h4>
+            <p className="text-sm text-slate-300">This run is paused pending manual review</p>
+          </div>
+          <button className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors">
+            Review Now
+          </button>
+        </motion.div>
+      )}
+      
+      {isRunning && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl border border-primary/40 bg-primary/10 flex items-center gap-3"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center"
+          >
+            <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full" />
+          </motion.div>
+          <div>
+            <h4 className="font-medium text-primary">Run In Progress</h4>
+            <p className="text-sm text-slate-300">Agents are actively working on {run.phase} phase</p>
+          </div>
+          <div className="ml-auto text-right">
+            <div className="text-sm font-medium text-white">
+              {Math.round(((PHASES.findIndex(p => p.key === run.phase) + 1) / PHASES.length) * 100)}%
+            </div>
+            <div className="text-xs text-slate-400">Complete</div>
+          </div>
+        </motion.div>
+      )}
+
       <div>
         <h3 className="text-lg font-semibold text-white mb-4">Run Overview</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <InfoCard label="Industry" value={run.brief.industry} />
           <InfoCard label="Target Audience" value={run.brief.targetAudience || 'General'} />
           <InfoCard label="Theme" value={run.brief.theme} />
-          <InfoCard label="Status" value={run.status.replace('_', ' ')} />
+          <InfoCard label="Current Phase" value={run.phase.replace('_', ' ')} />
         </div>
       </div>
       
       <div>
         <h4 className="text-md font-medium text-white mb-3">Goal</h4>
-        <p className="text-slate-300 leading-relaxed">{run.brief.goal}</p>
+        <p className="text-slate-300 leading-relaxed bg-slate-900/30 p-4 rounded-2xl border border-slate-800/30">
+          {run.brief.goal}
+        </p>
+      </div>
+
+      {/* Current Phase Details */}
+      <div>
+        <h4 className="text-md font-medium text-white mb-3">Current Phase: {run.phase}</h4>
+        <div className="p-4 rounded-2xl border border-slate-800/30 bg-slate-900/30">
+          <p className="text-sm text-slate-300">
+            {getPhaseDescription(run.phase)}
+          </p>
+          {isRunning && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-primary">
+              <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+              Estimated completion: {getEstimatedCompletion(run.phase)}
+            </div>
+          )}
+        </div>
       </div>
 
       {run.brief.constraints && (
@@ -121,6 +189,38 @@ function SummaryTab({ run }: { run: RunRecord }) {
       )}
     </div>
   );
+}
+
+function getPhaseDescription(phase: string): string {
+  const descriptions = {
+    'intake': 'Processing initial requirements and setting up the run',
+    'market': 'Scanning market trends and identifying opportunities',
+    'synthesis': 'Analyzing collected data and generating insights',
+    'deconstruct': 'Breaking down successful game mechanics and patterns',
+    'prioritize': 'Ranking opportunities and selecting best candidates',
+    'build': 'Generating game prototypes and assets',
+    'qa': 'Testing game functionality and performance',
+    'deploy': 'Uploading games to the distribution platform',
+    'measure': 'Collecting performance metrics and user feedback',
+    'decision': 'Evaluating results and planning next iteration'
+  };
+  return descriptions[phase as keyof typeof descriptions] || 'Processing...';
+}
+
+function getEstimatedCompletion(phase: string): string {
+  const estimates = {
+    'intake': '2-5 minutes',
+    'market': '10-15 minutes',
+    'synthesis': '5-10 minutes',
+    'deconstruct': '15-20 minutes',
+    'prioritize': '5-8 minutes',
+    'build': '30-45 minutes',
+    'qa': '10-15 minutes',
+    'deploy': '5-10 minutes',
+    'measure': '2-4 hours',
+    'decision': '5-10 minutes'
+  };
+  return estimates[phase as keyof typeof estimates] || 'Unknown';
 }
 
 function ArtifactsTab({ run }: { run: RunRecord }) {

@@ -27,7 +27,7 @@ interface RunTimelineProps {
   };
 }
 
-const PHASES: Array<{
+export const PHASES: Array<{
   key: RunPhase;
   label: string;
   description: string;
