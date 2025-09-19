@@ -1,0 +1,57 @@
+import { loadRuns } from '../../lib/data-source';
+import { withMetrics } from '../../lib/mock-data';
+import { DeploymentBoard } from './components/deployment-board';
+
+export default async function DeployPage() {
+  const runs = withMetrics(await loadRuns());
+  const deployRuns = runs.filter((run) => 
+    run.phase === 'deploy' || run.phase === 'measure' || run.status === 'done'
+  );
+  
+  // Mock deployment data
+  const deployments = deployRuns.map((run) => ({
+    ...run,
+    deploymentStatus: (run.status === 'done' ? 'live' : 
+                     run.phase === 'measure' ? 'uploading' : 'to_upload') as 'to_upload' | 'uploading' | 'live',
+    gameVariants: [
+      {
+        id: `${run.id}-portrait`,
+        orientation: 'portrait' as 'portrait' | 'landscape',
+        buildSize: Math.floor(Math.random() * 1000 + 500),
+        thumbnailUrl: '/api/placeholder/200/300',
+        uploadProgress: run.status === 'done' ? 100 : Math.floor(Math.random() * 80 + 10)
+      }
+    ],
+    metadata: {
+      clipcadeId: run.status === 'done' ? `CG${Math.random().toString(36).substr(2, 6).toUpperCase()}` : null,
+      uploadedAt: run.status === 'done' ? run.updatedAt : null
+    }
+  }));
+
+  return (
+    <main className="mx-auto max-w-7xl px-8 py-12">
+      <header className="mb-8">
+        <div className="flex items-center gap-3 text-sm text-slate-400 mb-4">
+          <a href="/" className="hover:text-primary transition-colors">Console</a>
+          <span>/</span>
+          <span>Deployment</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-white">Deployment Board</h1>
+            <p className="text-slate-300 mt-2">
+              Manage game uploads and track deployment status to Clipcade feed
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/40 text-sm font-medium">
+              {deployments.length} games ready
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <DeploymentBoard deployments={deployments} />
+    </main>
+  );
+}

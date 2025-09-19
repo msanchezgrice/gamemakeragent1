@@ -52,9 +52,9 @@ export function RunCard({ run }: RunCardProps) {
 
       <footer className="flex items-center justify-between text-xs text-slate-400">
         <span className="flex items-center gap-1"> <Clock className="h-3 w-3" /> Updated {timeAgo(run.updatedAt)} </span>
-        <button className="inline-flex items-center gap-1 text-primary transition-colors hover:text-accent" type="button">
+        <a href={`/runs/${run.id}`} className="inline-flex items-center gap-1 text-primary transition-colors hover:text-accent">
           View run <ArrowUpRight className="h-3 w-3" />
-        </button>
+        </a>
       </footer>
 
       {hasBlockers && (
