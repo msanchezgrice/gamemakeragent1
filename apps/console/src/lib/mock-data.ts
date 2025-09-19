@@ -95,17 +95,13 @@ export const mockRuns: RunRecord[] = templateRuns.map((run) => {
 export const mockTasks: ManualTask[] = templateRuns.flatMap((run) => run.blockers);
 
 export function withMetrics(runs: RunRecord[]): RunWithMetrics[] {
-  const lookup = new Map(templateRuns.map((run) => [run.id, run]));
-  return runs.map((run) => {
-    const template = lookup.get(run.id);
-    return {
-      ...run,
-      blockers: run.blockers.length ? run.blockers : template?.blockers ?? [],
-      metrics: template?.metrics ?? {
-        progress: 0.2,
-        playRate: undefined,
-        likability: undefined
-      }
-    };
-  });
+  // Just add metrics to real runs, no mock data override
+  return runs.map((run) => ({
+    ...run,
+    metrics: {
+      progress: Math.random() * 0.8 + 0.1, // Random progress for now
+      playRate: Math.random() * 0.6 + 0.2,
+      likability: Math.random() * 0.8 + 0.1
+    }
+  }));
 }

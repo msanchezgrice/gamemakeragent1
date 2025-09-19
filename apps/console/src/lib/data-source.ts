@@ -1,6 +1,5 @@
 // import { z } from 'zod';
 // import { runRecord } from '@gametok/schemas';
-import { mockRuns } from './mock-data';
 import { supabase } from './supabase';
 import type { RunRecord } from '@gametok/schemas';
 
@@ -60,13 +59,13 @@ export async function loadRuns() {
 
     if (error) {
       console.error('❌ Supabase error:', error);
-      console.log('🔄 Using mock data due to Supabase error');
-      return mockRuns;
+      console.log('🔄 Returning empty array due to Supabase error');
+      return [];
     }
 
     if (!runs || runs.length === 0) {
-      console.log('📭 No runs in database, using mock data');
-      return mockRuns;
+      console.log('📭 No runs in database, returning empty array');
+      return [];
     }
 
     console.log('✅ Direct Supabase success, runs count:', runs.length);
@@ -75,8 +74,8 @@ export async function loadRuns() {
     return transformed;
   } catch (error) {
     console.error('❌ Failed to load runs:', error);
-    console.log('🔄 Using mock data due to error');
-    return mockRuns;
+    console.log('🔄 Returning empty array due to error');
+    return [];
   }
 }
 

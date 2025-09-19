@@ -84,7 +84,9 @@ export default function NewRunPage() {
     setIsSubmitting(true);
     
     try {
+      console.log('🚀 Form submit: Creating run with brief:', brief);
       const newRun = await createRun(brief);
+      console.log('✅ Form submit: Run created successfully:', newRun);
       
       addToast({
         type: 'success',
@@ -92,13 +94,14 @@ export default function NewRunPage() {
         description: `${brief.theme} run has been started and is now processing.`
       });
       
-      // Redirect to the new run's detail page
-      router.push(`/runs/${newRun.id}`);
+      // Redirect to the dashboard to see the new run
+      router.push('/');
     } catch (error) {
+      console.error('❌ Form submit: Failed to create run:', error);
       addToast({
         type: 'error',
         title: 'Failed to Create Run',
-        description: 'There was an error starting your run. Please try again.'
+        description: error instanceof Error ? error.message : 'There was an error starting your run. Please try again.'
       });
       setIsSubmitting(false);
     }
