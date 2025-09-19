@@ -74,7 +74,7 @@ export async function loadRuns() {
 function transformSupabaseRuns(runs: unknown[]) {
   console.log('🔧 transformSupabaseRuns: Processing', runs.length, 'runs');
   
-  return runs.map((run: any, index) => {
+  return runs.map((run: Record<string, unknown>, index) => {
     console.log(`🔧 Transform run ${index}:`, run.id, run.brief?.theme || 'No theme');
     
     const transformedRun = {
@@ -84,7 +84,7 @@ function transformSupabaseRuns(runs: unknown[]) {
       createdAt: run.created_at,
       updatedAt: run.updated_at,
       brief: run.brief,
-      blockers: (run.blockers || []).map((task: any) => ({
+      blockers: ((run.blockers as unknown[]) || []).map((task: Record<string, unknown>) => ({
         id: task.id,
         runId: task.run_id,
         phase: task.phase as 'prioritize',
