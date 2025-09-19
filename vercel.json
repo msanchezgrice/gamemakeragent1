@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd packages/schemas && pnpm build && cd ../utils && pnpm build && cd ../agents && pnpm build && cd ../../apps/console && pnpm build",
+  "buildCommand": "pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && pnpm --filter @gametok/console build",
   "outputDirectory": "apps/console/.next",
   "installCommand": "pnpm install"
 }
