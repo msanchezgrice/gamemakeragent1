@@ -18,8 +18,7 @@ export default function RunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    async function fetchRun() {
+  const fetchRun = async () => {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
       console.log('🔍 RunDetailPage: Timestamp:', new Date().toISOString());
       
@@ -97,8 +96,15 @@ export default function RunDetailPage() {
       } finally {
         setLoading(false);
       }
-    }
+  };
 
+  const refreshRun = async () => {
+    console.log('🔄 RunDetailPage: Refreshing run data...');
+    setLoading(true);
+    await fetchRun();
+  };
+
+  useEffect(() => {
     fetchRun();
   }, [runId]);
 
@@ -167,7 +173,7 @@ export default function RunDetailPage() {
           <RunTimeline run={run} />
         </div>
         <div>
-          <RunTabs run={run} />
+          <RunTabs run={run} onRunUpdate={refreshRun} />
         </div>
       </div>
     </main>

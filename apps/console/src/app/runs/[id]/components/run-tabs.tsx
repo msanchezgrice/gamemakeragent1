@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
+import { advanceRun, completeTask } from '../../../../lib/data-source';
 
 interface RunTabsProps {
   run: RunRecord & {
@@ -24,6 +25,7 @@ interface RunTabsProps {
       likability?: number;
     };
   };
+  onRunUpdate?: () => void;
 }
 
 type TabKey = 'summary' | 'artifacts' | 'activity' | 'tasks';
@@ -39,7 +41,7 @@ const TABS: Array<{
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
-export function RunTabs({ run }: RunTabsProps) {
+export function RunTabs({ run, onRunUpdate }: RunTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('summary');
 
   return (
@@ -76,19 +78,34 @@ export function RunTabs({ run }: RunTabsProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {activeTab === 'summary' && <SummaryTab run={run} />}
+          {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} />}
           {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
           {activeTab === 'activity' && <ActivityTab run={run} />}
-          {activeTab === 'tasks' && <TasksTab run={run} />}
+          {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
         </motion.div>
       </div>
     </div>
   );
 }
 
-function SummaryTab({ run }: { run: RunRecord }) {
+function SummaryTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
+  const [isAdvancing, setIsAdvancing] = useState(false);
   const isAwaitingHuman = run.status === 'awaiting_human';
   const isRunning = run.status === 'running';
+  
+  const handleAdvanceRun = async () => {
+    console.log('🚀 SummaryTab: Advancing run:', run.id);
+    setIsAdvancing(true);
+    try {
+      await advanceRun(run.id);
+      console.log('✅ SummaryTab: Run advanced successfully');
+      onRunUpdate?.();
+    } catch (error) {
+      console.error('❌ SummaryTab: Failed to advance run:', error);
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -106,8 +123,12 @@ function SummaryTab({ run }: { run: RunRecord }) {
             <h4 className="font-medium text-warning">Human Approval Required</h4>
             <p className="text-sm text-slate-300">This run is paused pending manual review</p>
           </div>
-          <button className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors">
-            Review Now
+          <button 
+            onClick={handleAdvanceRun}
+            disabled={isAdvancing}
+            className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors disabled:opacity-50"
+          >
+            {isAdvancing ? 'Advancing...' : 'Review Now'}
           </button>
         </motion.div>
       )}
@@ -355,7 +376,26 @@ function ActivityTab({ run }: { run: RunRecord }) {
   );
 }
 
-function TasksTab({ run }: { run: RunRecord }) {
+function TasksTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
+  const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
+  
+  const handleCompleteTask = async (taskId: string) => {
+    console.log('🎯 TasksTab: Completing task:', taskId);
+    setCompletingTasks(prev => new Set(prev).add(taskId));
+    try {
+      await completeTask(taskId);
+      console.log('✅ TasksTab: Task completed successfully');
+      onRunUpdate?.();
+    } catch (error) {
+      console.error('❌ TasksTab: Failed to complete task:', error);
+    } finally {
+      setCompletingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
+  };
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-white">Manual Tasks</h3>
@@ -386,8 +426,12 @@ function TasksTab({ run }: { run: RunRecord }) {
                     </span>
                   </div>
                 </div>
-                <button className="px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors">
-                  Resolve
+                <button 
+                  onClick={() => handleCompleteTask(task.id)}
+                  disabled={completingTasks.has(task.id)}
+                  className="px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors disabled:opacity-50"
+                >
+                  {completingTasks.has(task.id) ? 'Resolving...' : 'Resolve'}
                 </button>
               </div>
             </div>
