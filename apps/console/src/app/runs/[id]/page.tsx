@@ -9,12 +9,22 @@ interface RunDetailPageProps {
 }
 
 export default async function RunDetailPage({ params }: RunDetailPageProps) {
+  console.log('🔍 RunDetailPage: Loading run with ID:', params.id);
+  
   const runs = withMetrics(await loadRuns());
+  console.log('🔍 RunDetailPage: Total runs loaded:', runs.length);
+  console.log('🔍 RunDetailPage: Available run IDs:', runs.map(r => r.id));
+  
   const run = runs.find((r) => r.id === params.id);
+  console.log('🔍 RunDetailPage: Found run:', !!run);
 
   if (!run) {
+    console.error('❌ RunDetailPage: Run not found for ID:', params.id);
+    console.log('📋 Available runs:', runs.map(r => ({ id: r.id, theme: r.brief.theme })));
     notFound();
   }
+
+  console.log('✅ RunDetailPage: Rendering run:', run.brief.theme);
 
   return (
     <main className="mx-auto max-w-7xl px-8 py-12">
