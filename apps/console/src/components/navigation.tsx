@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/qa', label: 'QA', icon: TestTube },
   { href: '/deploy', label: 'Deploy', icon: Rocket },
   { href: '/runs/new', label: 'New Run', icon: Plus },
+  { href: '/debug', label: 'Debug', icon: Search },
 ];
 
 export function Navigation() {
