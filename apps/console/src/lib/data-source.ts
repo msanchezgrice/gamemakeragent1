@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { runRecord } from '@gametok/schemas';
+// import { z } from 'zod';
+// import { runRecord } from '@gametok/schemas';
 import { mockRuns } from './mock-data';
 import { supabase, type DatabaseRun, type DatabaseTask } from './supabase';
 
@@ -34,7 +34,7 @@ export async function loadRuns() {
       phase: run.phase,
       createdAt: run.created_at,
       updatedAt: run.updated_at,
-      brief: run.brief as any,
+      brief: run.brief,
       blockers: run.blockers.map(task => ({
         id: task.id,
         runId: task.run_id,
@@ -56,7 +56,13 @@ export async function loadRuns() {
   }
 }
 
-export async function createRun(brief: unknown) {
+export async function createRun(brief: {
+  industry: string;
+  goal: string;
+  theme: string;
+  targetAudience?: string;
+  constraints: Record<string, unknown>;
+}) {
   try {
     // Insert into Supabase
     const { data: run, error } = await supabase
@@ -81,7 +87,7 @@ export async function createRun(brief: unknown) {
       phase: run.phase,
       createdAt: run.created_at,
       updatedAt: run.updated_at,
-      brief: run.brief as any,
+      brief: run.brief,
       blockers: []
     };
 

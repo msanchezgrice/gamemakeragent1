@@ -10,7 +10,13 @@ export interface DatabaseRun {
   id: string;
   status: 'queued' | 'running' | 'awaiting_human' | 'paused' | 'failed' | 'done';
   phase: 'intake' | 'market' | 'synthesis' | 'deconstruct' | 'prioritize' | 'build' | 'qa' | 'deploy' | 'measure' | 'decision';
-  brief: unknown;
+  brief: {
+    industry: string;
+    goal: string;
+    theme: string;
+    targetAudience?: string;
+    constraints: Record<string, unknown>;
+  };
   created_at: string;
   updated_at: string;
   notes?: string;
@@ -38,6 +44,6 @@ export interface DatabaseArtifact {
   kind: string;
   path: string;
   sha256?: string;
-  meta: unknown;
+  meta: Record<string, unknown>;
   created_at: string;
 }

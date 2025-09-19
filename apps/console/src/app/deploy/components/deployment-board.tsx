@@ -119,7 +119,7 @@ function DeploymentCard({
     <div className="rounded-2xl border border-slate-800/50 bg-slate-900/40 p-4 hover:bg-slate-900/60 transition-colors">
       <div className="flex items-start gap-3">
         <div className="h-16 w-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-          <Image className="h-6 w-6 text-slate-400" />
+          <Image className="h-6 w-6 text-slate-400" aria-label="Game thumbnail placeholder" />
         </div>
         
         <div className="flex-1 min-w-0">
