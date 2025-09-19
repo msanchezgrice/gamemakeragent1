@@ -15,29 +15,37 @@ export async function loadRuns() {
   
   try {
     // Try Edge Function first, fallback to direct Supabase, then mock
-    if (orchestratorBaseUrl) {
+    if (orchestratorBaseUrl && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.log('🚀 Trying Edge Function:', `${orchestratorBaseUrl}/runs`);
       
-      const response = await fetch(`${orchestratorBaseUrl}/runs`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+      try {
+        const response = await fetch(`${orchestratorBaseUrl}/runs`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          cache: 'no-store'
+        });
+        
+        console.log('🔍 Edge Function response status:', response.status);
+        
+        if (response.ok) {
+          const runs = await response.json();
+          console.log('✅ Edge Function success, runs count:', runs.length);
+          const transformed = transformSupabaseRuns(runs);
+          console.log('✅ Transformed runs:', transformed.length);
+          return transformed;
+        } else {
+          const errorText = await response.text();
+          console.warn('⚠️ Edge Function failed, status:', response.status, 'error:', errorText);
         }
-      });
-      
-      console.log('🔍 Edge Function response status:', response.status);
-      
-      if (response.ok) {
-        const runs = await response.json();
-        console.log('✅ Edge Function success, runs count:', runs.length);
-        const transformed = transformSupabaseRuns(runs);
-        console.log('✅ Transformed runs:', transformed.length);
-        return transformed;
-      } else {
-        console.warn('⚠️ Edge Function failed, status:', response.status);
+      } catch (fetchError) {
+        console.warn('⚠️ Edge Function fetch failed:', fetchError);
       }
     } else {
-      console.log('⚠️ No orchestratorBaseUrl, skipping Edge Function');
+      console.log('⚠️ No orchestratorBaseUrl or anon key, skipping Edge Function');
+      console.log('🔍 orchestratorBaseUrl:', orchestratorBaseUrl);
+      console.log('🔍 anonKey available:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     }
 
     // Fallback to direct Supabase

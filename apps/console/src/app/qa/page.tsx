@@ -1,10 +1,40 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { loadRuns } from '../../lib/data-source';
 import { withMetrics } from '../../lib/mock-data';
 import { QATable } from './components/qa-table';
 import { QAStats } from './components/qa-stats';
+import { QATableSkeleton } from '../../components/skeleton';
+import type { RunRecord } from '@gametok/schemas';
 
-export default async function QADashboard() {
-  const runs = withMetrics(await loadRuns());
+export default function QADashboard() {
+  const [runs, setRuns] = useState<Array<RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchRuns() {
+      try {
+        const fetchedRuns = withMetrics(await loadRuns());
+        setRuns(fetchedRuns);
+      } catch (error) {
+        console.error('❌ QA Dashboard: Failed to load runs:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRuns();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-7xl px-8 py-12">
+        <QATableSkeleton />
+      </main>
+    );
+  }
+
   const qaRuns = runs.filter((run) => run.phase === 'qa' || run.status === 'awaiting_human');
   
   // Mock QA data
