@@ -1,6 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "pnpm --filter @gametok/schemas build && pnpm --filter @gametok/utils build && pnpm --filter @gametok/agents build && pnpm --filter @gametok/console build",
-  "outputDirectory": "apps/console/.next",
-  "installCommand": "pnpm install"
+  "builds": [
+    {
+      "src": "apps/console/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "apps/console/$1"
+    }
+  ]
 }
