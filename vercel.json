@@ -8,11 +8,5 @@
         "buildCommand": "cd ../.. && pnpm install && pnpm run build:vercel && cd apps/console && pnpm run build"
       }
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/apps/console/$1"
-    }
   ]
 }
