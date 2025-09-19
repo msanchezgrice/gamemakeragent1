@@ -136,7 +136,26 @@ export class SupabaseRunStore implements RunStore {
     }
   }
 
-  private transformDatabaseRun(dbRun: any): RunRecord {
+  private transformDatabaseRun(dbRun: {
+    id: string;
+    status: string;
+    phase: string;
+    created_at: string;
+    updated_at: string;
+    brief: unknown;
+    blockers?: Array<{
+      id: string;
+      run_id: string;
+      phase: string;
+      task_type: string;
+      title: string;
+      description: string;
+      created_at: string;
+      due_at?: string;
+      completed_at?: string;
+      assignee?: string;
+    }>;
+  }): RunRecord {
     return {
       id: dbRun.id,
       status: dbRun.status,
@@ -144,7 +163,7 @@ export class SupabaseRunStore implements RunStore {
       createdAt: dbRun.created_at,
       updatedAt: dbRun.updated_at,
       brief: dbRun.brief,
-      blockers: (dbRun.blockers || []).map((task: any) => ({
+      blockers: (dbRun.blockers || []).map((task) => ({
         id: task.id,
         runId: task.run_id,
         phase: task.phase,

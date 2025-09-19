@@ -3,12 +3,28 @@
 import { mockRuns } from './mock-data';
 import { supabase, type DatabaseRun, type DatabaseTask } from './supabase';
 
-// const runsResponse = z.object({ runs: z.array(runRecord) });
-// const orchestratorBaseUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL;
+const orchestratorBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL 
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1/orchestrator-api'
+  : null;
 
 export async function loadRuns() {
   try {
-    // First try to load from Supabase
+    // Try Edge Function first, fallback to direct Supabase, then mock
+    if (orchestratorBaseUrl) {
+      const response = await fetch(`${orchestratorBaseUrl}/runs`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const runs = await response.json();
+        return transformSupabaseRuns(runs);
+      }
+    }
+
+    // Fallback to direct Supabase
     const { data: runs, error } = await supabase
       .from('orchestrator_runs')
       .select(`
@@ -27,33 +43,34 @@ export async function loadRuns() {
       return mockRuns;
     }
 
-    // Transform database format to our schema format
-    const transformedRuns = runs.map((run: DatabaseRun & { blockers: DatabaseTask[] }) => ({
-      id: run.id,
-      status: run.status,
-      phase: run.phase,
-      createdAt: run.created_at,
-      updatedAt: run.updated_at,
-      brief: run.brief,
-      blockers: run.blockers.map(task => ({
-        id: task.id,
-        runId: task.run_id,
-        phase: task.phase as 'prioritize', // Type assertion for now
-        type: task.task_type,
-        title: task.title,
-        description: task.description,
-        createdAt: task.created_at,
-        dueAt: task.due_at,
-        completedAt: task.completed_at,
-        assignee: task.assignee
-      }))
-    }));
-
-    return transformedRuns;
+    return transformSupabaseRuns(runs);
   } catch (error) {
-    console.error('Failed to load runs from Supabase:', error);
+    console.error('Failed to load runs:', error);
     return mockRuns;
   }
+}
+
+function transformSupabaseRuns(runs: Array<DatabaseRun & { blockers: DatabaseTask[] }>) {
+  return runs.map((run) => ({
+    id: run.id,
+    status: run.status,
+    phase: run.phase,
+    createdAt: run.created_at,
+    updatedAt: run.updated_at,
+    brief: run.brief,
+    blockers: run.blockers.map(task => ({
+      id: task.id,
+      runId: task.run_id,
+      phase: task.phase as 'prioritize', // Type assertion for now
+      type: task.task_type,
+      title: task.title,
+      description: task.description,
+      createdAt: task.created_at,
+      dueAt: task.due_at,
+      completedAt: task.completed_at,
+      assignee: task.assignee
+    }))
+  }));
 }
 
 export async function createRun(brief: {
@@ -64,24 +81,23 @@ export async function createRun(brief: {
   constraints: Record<string, unknown>;
 }) {
   try {
-    // Insert into Supabase
-    const { data: run, error } = await supabase
-      .from('orchestrator_runs')
-      .insert({
-        brief,
-        status: 'queued',
-        phase: 'intake'
-      })
-      .select()
-      .single();
+    const response = await fetch(`${orchestratorBaseUrl}/runs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ brief })
+    });
 
-    if (error) {
-      console.error('Supabase error creating run:', error);
-      throw new Error('Failed to create run in database');
+    if (!response.ok) {
+      throw new Error(`Failed to create run: ${response.status}`);
     }
 
+    const run = await response.json();
+    
     // Transform to our schema format
-    const transformedRun = {
+    return {
       id: run.id,
       status: run.status,
       phase: run.phase,
@@ -90,8 +106,6 @@ export async function createRun(brief: {
       brief: run.brief,
       blockers: []
     };
-
-    return transformedRun;
   } catch (error) {
     console.error('Failed to create run:', error);
     throw error;
@@ -100,23 +114,19 @@ export async function createRun(brief: {
 
 export async function advanceRun(runId: string) {
   try {
-    // Update run status in Supabase
-    const { data: run, error } = await supabase
-      .from('orchestrator_runs')
-      .update({
-        status: 'running',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', runId)
-      .select()
-      .single();
+    const response = await fetch(`${orchestratorBaseUrl}/runs/${runId}/advance`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-    if (error) {
-      console.error('Supabase error advancing run:', error);
-      throw new Error('Failed to advance run in database');
+    if (!response.ok) {
+      throw new Error(`Failed to advance run: ${response.status}`);
     }
 
-    return { success: true, run };
+    return await response.json();
   } catch (error) {
     console.error('Failed to advance run:', error);
     throw error;
@@ -125,23 +135,19 @@ export async function advanceRun(runId: string) {
 
 export async function completeTask(taskId: string) {
   try {
-    // Mark task as completed in Supabase
-    const { data: task, error } = await supabase
-      .from('orchestrator_manual_tasks')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', taskId)
-      .select()
-      .single();
+    const response = await fetch(`${orchestratorBaseUrl}/tasks/${taskId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-    if (error) {
-      console.error('Supabase error completing task:', error);
-      throw new Error('Failed to complete task in database');
+    if (!response.ok) {
+      throw new Error(`Failed to complete task: ${response.status}`);
     }
 
-    return { success: true, task };
+    return await response.json();
   } catch (error) {
     console.error('Failed to complete task:', error);
     throw error;
