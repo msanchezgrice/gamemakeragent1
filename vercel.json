@@ -1,9 +1,12 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd apps/console && pnpm run build",
+  "outputDirectory": "apps/console/.next",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "nextjs",
+  "rewrites": [
     {
-      "src": "apps/console/package.json",
-      "use": "@vercel/next"
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }
