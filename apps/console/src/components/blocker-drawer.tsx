@@ -23,7 +23,10 @@ export function BlockerDrawer({ tasks }: BlockerDrawerProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-slate-800/70 bg-surface/70 p-6 backdrop-blur">
+    <section 
+      data-blocker-drawer
+      className="rounded-3xl border border-slate-800/70 bg-surface/70 p-6 backdrop-blur"
+    >
       <header className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Awaiting Human Review</p>
