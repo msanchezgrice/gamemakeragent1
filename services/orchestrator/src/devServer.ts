@@ -4,6 +4,12 @@ import type { IntakeBrief } from '@gametok/schemas';
 import { createRunStore } from './store.factory.js';
 
 const fastify = Fastify({ logger: true });
+
+// Add CORS support
+fastify.register(import('@fastify/cors'), {
+  origin: true,
+  credentials: true
+});
 const store = createRunStore();
 const orchestrator = new OrchestratorService({ store });
 
@@ -46,6 +52,11 @@ fastify.post<{ Params: RunTaskParams }>('/runs/:id/tasks/:taskId/resolve', async
     request.log.error(error);
     return reply.code(400).send({ error: (error as Error).message });
   }
+});
+
+// Health check endpoint
+fastify.get('/health', async () => {
+  return { status: 'healthy', timestamp: new Date().toISOString() };
 });
 
 fastify.listen({ port: 3333, host: '0.0.0.0' }).then(() => {

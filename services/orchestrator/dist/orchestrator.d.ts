@@ -1,7 +1,9 @@
 import type { IntakeBrief, ManualTask, RunRecord } from '@gametok/schemas';
 import { InMemoryNotifier } from '@gametok/utils';
+import type { RunStore } from './store.js';
 interface OrchestratorOptions {
     notifier?: InMemoryNotifier;
+    store?: RunStore;
 }
 interface CreateRunInput {
     brief: IntakeBrief;
@@ -12,11 +14,11 @@ interface AdvanceResult {
     createdTasks: ManualTask[];
 }
 export declare class OrchestratorService {
-    private runs;
     private readonly notifier;
     private readonly logger;
+    private readonly store;
     constructor(options?: OrchestratorOptions);
-    listRuns(): {
+    listRuns(): Promise<{
         status: "queued" | "running" | "awaiting_human" | "paused" | "failed" | "done";
         id: string;
         phase: "intake" | "market" | "synthesis" | "deconstruct" | "prioritize" | "build" | "qa" | "deploy" | "measure" | "decision";
@@ -45,8 +47,8 @@ export declare class OrchestratorService {
             completedAt?: string | undefined;
             assignee?: string | undefined;
         }[];
-    }[];
-    getRun(id: string): {
+    }[]>;
+    getRun(id: string): Promise<{
         status: "queued" | "running" | "awaiting_human" | "paused" | "failed" | "done";
         id: string;
         phase: "intake" | "market" | "synthesis" | "deconstruct" | "prioritize" | "build" | "qa" | "deploy" | "measure" | "decision";
@@ -75,10 +77,10 @@ export declare class OrchestratorService {
             completedAt?: string | undefined;
             assignee?: string | undefined;
         }[];
-    } | undefined;
-    createRun(input: CreateRunInput): RunRecord;
+    } | null>;
+    createRun(input: CreateRunInput): Promise<RunRecord>;
     advance(runId: string): Promise<AdvanceResult>;
-    resolveTask(runId: string, taskId: string): {
+    resolveTask(runId: string, taskId: string): Promise<{
         status: "queued" | "running" | "awaiting_human" | "paused" | "failed" | "done";
         id: string;
         phase: "intake" | "market" | "synthesis" | "deconstruct" | "prioritize" | "build" | "qa" | "deploy" | "measure" | "decision";
@@ -107,11 +109,11 @@ export declare class OrchestratorService {
             completedAt?: string | undefined;
             assignee?: string | undefined;
         }[];
-    };
+    }>;
     private buildAgentContext;
     private createManualTask;
-    private pushBlocker;
     private taskTitle;
     private taskDescription;
+    private requireRun;
 }
 export {};
