@@ -64,9 +64,15 @@ export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
     return filtered;
   }, [runs, filters]);
 
+  const queued = filteredRuns.filter((run) => run.status === 'queued');
   const awaiting = filteredRuns.filter((run) => run.status === 'awaiting_human');
   const inFlight = filteredRuns.filter((run) => run.status === 'running');
   const tasks = filteredRuns.flatMap((run) => run.blockers);
+  
+  console.log('📊 Dashboard sections:');
+  console.log('  - Queued runs:', queued.length);
+  console.log('  - In flight runs:', inFlight.length);
+  console.log('  - Awaiting runs:', awaiting.length);
 
   const hasActiveFilters = filters.search || 
     filters.status.length > 0 || 
@@ -86,6 +92,7 @@ export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
           </div>
           <div className="flex items-center gap-4">
             <SummaryBadge label="Active runs" value={filteredRuns.length} tone="primary" />
+            <SummaryBadge label="Queued" value={queued.length} tone="primary" />
             <SummaryBadge label="Awaiting approval" value={awaiting.length} tone="warning" />
             <button
               onClick={() => setIsFilterOpen(true)}
@@ -108,6 +115,19 @@ export function DashboardWithFilters({ runs }: DashboardWithFiltersProps) {
 
         <section className="mt-10 grid gap-8 lg:grid-cols-[2fr,1fr]">
           <div className="space-y-6">
+            <SectionHeading title="Queued" subtitle="New runs ready to start processing" count={queued.length} />
+            {queued.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <p>No runs in queue</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                {queued.map((run) => (
+                  <RunCard key={run.id} run={run} />
+                ))}
+              </div>
+            )}
+
             <SectionHeading title="In flight" subtitle="High-priority runs currently automating" count={inFlight.length} />
             {inFlight.length === 0 ? (
               <div className="text-center py-8 text-slate-400">
