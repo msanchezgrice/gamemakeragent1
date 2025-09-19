@@ -7,6 +7,7 @@ import { withMetrics } from '../../../lib/mock-data';
 import { RunTimeline } from './components/run-timeline';
 import { RunTabs } from './components/run-tabs';
 import { TimelineSkeleton } from '../../../components/skeleton';
+import { supabase } from '../../../lib/supabase';
 import type { RunRecord } from '@gametok/schemas';
 
 export default function RunDetailPage() {
@@ -20,14 +21,67 @@ export default function RunDetailPage() {
   useEffect(() => {
     async function fetchRun() {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
+      console.log('🔍 RunDetailPage: Timestamp:', new Date().toISOString());
       
       try {
+        // Try direct database query first for this specific run
+        console.log('🎯 RunDetailPage: Trying direct database query...');
+        
+        const { data: directRun, error: directError } = await supabase
+          .from('orchestrator_runs')
+          .select(`
+            *,
+            blockers:orchestrator_manual_tasks(*)
+          `)
+          .eq('id', runId)
+          .single();
+
+        if (directError) {
+          console.error('❌ RunDetailPage: Direct query error:', directError);
+        } else if (directRun) {
+          console.log('✅ RunDetailPage: Found run via direct query:', directRun.brief?.theme);
+          
+          // Transform the direct result
+          const transformedRun = {
+            id: directRun.id,
+            status: directRun.status,
+            phase: directRun.phase,
+            createdAt: directRun.created_at,
+            updatedAt: directRun.updated_at,
+            brief: directRun.brief,
+            blockers: (directRun.blockers || []).map((task: any) => ({
+              id: task.id,
+              runId: task.run_id,
+              phase: task.phase,
+              type: task.task_type,
+              title: task.title,
+              description: task.description,
+              createdAt: task.created_at,
+              dueAt: task.due_at,
+              completedAt: task.completed_at,
+              assignee: task.assignee
+            })),
+            metrics: {
+              progress: Math.random() * 0.8 + 0.1,
+              playRate: Math.random() * 0.6 + 0.2,
+              likability: Math.random() * 0.8 + 0.1
+            }
+          };
+          
+          console.log('✅ RunDetailPage: Setting direct run data:', transformedRun);
+          setRun(transformedRun);
+          setLoading(false);
+          return;
+        }
+        
+        // Fallback to loadRuns if direct query fails
+        console.log('🔄 RunDetailPage: Falling back to loadRuns...');
         const runs = withMetrics(await loadRuns());
         console.log('🔍 RunDetailPage: Total runs loaded:', runs.length);
         console.log('🔍 RunDetailPage: Available run IDs:', runs.map(r => r.id));
         
         const foundRun = runs.find((r) => r.id === runId);
-        console.log('🔍 RunDetailPage: Found run:', !!foundRun);
+        console.log('🔍 RunDetailPage: Found run via loadRuns:', !!foundRun);
 
         if (!foundRun) {
           console.error('❌ RunDetailPage: Run not found for ID:', runId);
