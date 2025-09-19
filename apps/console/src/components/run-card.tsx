@@ -16,6 +16,7 @@ interface RunCardProps {
 }
 
 export function RunCard({ run }: RunCardProps) {
+  console.log('🎯 RunCard: Rendering card for run:', run.id, 'theme:', run.brief.theme);
   const hasBlockers = run.blockers.length > 0;
   return (
     <motion.div
@@ -52,7 +53,11 @@ export function RunCard({ run }: RunCardProps) {
 
       <footer className="flex items-center justify-between text-xs text-slate-400">
         <span className="flex items-center gap-1"> <Clock className="h-3 w-3" /> Updated {timeAgo(run.updatedAt)} </span>
-        <a href={`/runs/${run.id}`} className="inline-flex items-center gap-1 text-primary transition-colors hover:text-accent">
+        <a 
+          href={`/runs/${run.id}`} 
+          className="inline-flex items-center gap-1 text-primary transition-colors hover:text-accent"
+          onClick={() => console.log('🔗 RunCard: Clicking link to run ID:', run.id)}
+        >
           View run <ArrowUpRight className="h-3 w-3" />
         </a>
       </footer>
