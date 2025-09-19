@@ -94,8 +94,15 @@ export default function NewRunPage() {
         description: `${brief.theme} run has been started and is now processing.`
       });
       
+      console.log('🔄 Form submit: Redirecting to dashboard...');
+      
       // Redirect to the dashboard to see the new run
       router.push('/');
+      
+      // Also trigger a page refresh to ensure new data loads
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('❌ Form submit: Failed to create run:', error);
       addToast({

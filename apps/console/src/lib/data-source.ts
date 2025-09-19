@@ -118,29 +118,41 @@ export async function createRun(brief: {
   targetAudience?: string;
   constraints: Record<string, unknown>;
 }) {
-  console.log('🚀 createRun: Starting with brief:', brief);
-  console.log('🚀 createRun: Using URL:', `${orchestratorBaseUrl}/runs`);
+  console.log('🔥 =================================');
+  console.log('🚀 createRun: STARTING NEW RUN CREATION');
+  console.log('🔥 =================================');
+  console.log('📝 Brief data:', JSON.stringify(brief, null, 2));
+  console.log('🌐 Target URL:', `${orchestratorBaseUrl}/runs`);
+  console.log('🔑 Auth available:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   
   try {
+    console.log('📡 Making POST request to Edge Function...');
+    
+    const requestBody = { brief };
+    console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch(`${orchestratorBaseUrl}/runs`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ brief })
+      body: JSON.stringify(requestBody)
     });
 
-    console.log('🔍 createRun: Response status:', response.status);
+    console.log('📊 Response received:');
+    console.log('  - Status:', response.status);
+    console.log('  - Status Text:', response.statusText);
+    console.log('  - Headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ createRun: Error response:', errorText);
+      console.error('❌ createRun: Error response body:', errorText);
       throw new Error(`Failed to create run: ${response.status} - ${errorText}`);
     }
 
     const run = await response.json();
-    console.log('✅ createRun: Success, created run:', run.id);
+    console.log('🎉 createRun: SUCCESS! Raw response:', JSON.stringify(run, null, 2));
     
     // Transform to our schema format
     const transformedRun = {
@@ -153,10 +165,16 @@ export async function createRun(brief: {
       blockers: []
     };
     
-    console.log('✅ createRun: Transformed run:', transformedRun);
+    console.log('✨ createRun: Transformed run:', JSON.stringify(transformedRun, null, 2));
+    console.log('🔥 =================================');
+    console.log('✅ RUN CREATION COMPLETE - ID:', run.id);
+    console.log('🔥 =================================');
+    
     return transformedRun;
   } catch (error) {
-    console.error('❌ createRun: Failed:', error);
+    console.log('🔥 =================================');
+    console.error('💥 createRun: FAILED WITH ERROR:', error);
+    console.log('🔥 =================================');
     throw error;
   }
 }
