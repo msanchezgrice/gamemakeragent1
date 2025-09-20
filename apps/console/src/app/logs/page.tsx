@@ -8,7 +8,6 @@ import {
   AlertCircle, 
   CheckCircle, 
   Info, 
-  Zap,
   RefreshCw,
   Filter
 } from 'lucide-react';

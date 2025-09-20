@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { loadRuns } from '../../../lib/data-source';
 import { RunTimeline } from './components/run-timeline';
@@ -17,7 +17,7 @@ export default function RunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  const fetchRun = async () => {
+  const fetchRun = useCallback(async () => {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
       console.log('🔍 RunDetailPage: Timestamp:', new Date().toISOString());
       
@@ -95,7 +95,7 @@ export default function RunDetailPage() {
       } finally {
         setLoading(false);
       }
-  };
+  }, [runId]);
 
   const refreshRun = async () => {
     console.log('🔄 RunDetailPage: Refreshing run data...');
@@ -105,7 +105,7 @@ export default function RunDetailPage() {
 
   useEffect(() => {
     fetchRun();
-  }, [runId]);
+  }, [fetchRun]);
 
   if (loading) {
     return (
