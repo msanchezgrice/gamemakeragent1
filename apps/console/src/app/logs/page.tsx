@@ -55,7 +55,7 @@ export default function LogsPage() {
         }
       });
       
-      let realLogs: LogEntry[] = [];
+      const realLogs: LogEntry[] = [];
 
       // Add agent thinking traces and artifacts
       if (!logsError && agentLogs) {
