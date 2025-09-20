@@ -221,7 +221,7 @@ export default function RunDetailPage() {
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md mx-4">
           <h3 className="text-lg font-semibold text-white mb-2">Delete Run</h3>
           <p className="text-slate-300 mb-4">
-            Are you sure you want to delete "{run?.brief.theme}"? This action cannot be undone.
+            Are you sure you want to delete &quot;{run?.brief.theme}&quot;? This action cannot be undone.
           </p>
           <div className="flex gap-3 justify-end">
             <button
