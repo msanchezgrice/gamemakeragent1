@@ -245,7 +245,7 @@ interface ArtifactData {
   meta?: {
     filename?: string;
     size?: number;
-    data?: any;
+    data?: unknown;
     contentType?: string;
   };
 }
