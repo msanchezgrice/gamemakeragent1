@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Activity, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle, 
-  Info, 
+import {
+  Activity,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  Info,
   RefreshCw,
   Filter
 } from 'lucide-react';
-// Note: In a real implementation, we would fetch logs from Supabase or other logging service
+import { supabase } from '../../lib/supabase';
 
 interface LogEntry {
   id: string;
@@ -34,6 +34,16 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     console.log('📋 Logs: Fetching system logs...');
     try {
+      // Fetch real logs from database including thinking traces
+      const { data: agentLogs, error: logsError } = await supabase
+        .from('orchestrator_logs')
+        .select(`
+          *,
+          run:orchestrator_runs(brief)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
       // Fetch real logs from Supabase Edge Function
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs`, {
         headers: {
@@ -43,11 +53,31 @@ export default function LogsPage() {
       });
       
       let realLogs: LogEntry[] = [];
+
+      // Add agent thinking traces and artifacts
+      if (!logsError && agentLogs) {
+        const agentLogEntries = agentLogs.map((log: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          id: `agent-${log.id}`,
+          timestamp: log.created_at,
+          level: log.level as LogEntry['level'],
+          service: log.agent,
+          message: log.message,
+          runId: log.run_id,
+          phase: log.phase,
+          projectName: log.run?.brief?.theme || 'Unknown Project',
+          metadata: {
+            thinking_trace: log.thinking_trace,
+            llm_response: log.llm_response,
+            ...log.metadata
+          }
+        }));
+        realLogs.push(...agentLogEntries);
+      }
       
       if (response.ok) {
         const runs = await response.json();
         // Convert runs to log entries
-        realLogs = runs.slice(0, 6).map((run: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        const runLogEntries = runs.slice(0, 6).map((run: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
           id: `run-${run.id}`,
           timestamp: run.updated_at,
           level: run.status === 'failed' ? 'error' as const : 
@@ -65,6 +95,7 @@ export default function LogsPage() {
             blockers: run.blockers?.length || 0
           }
         }));
+        realLogs.push(...runLogEntries);
       }
       
 
@@ -232,16 +263,36 @@ export default function LogsPage() {
                       Project: <span className="text-slate-300">{log.projectName}</span>
                     </p>
                   )}
-                  {log.metadata && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300">
-                        Show metadata
-                      </summary>
-                      <pre className="text-xs text-slate-400 mt-1 bg-slate-900/50 p-2 rounded overflow-x-auto">
-                        {JSON.stringify(log.metadata, null, 2)}
-                      </pre>
-                    </details>
-                  )}
+                        {log.metadata?.thinking_trace && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300">
+                              Show thinking trace
+                            </summary>
+                            <div className="text-xs text-slate-300 mt-1 bg-slate-900/50 p-3 rounded border border-slate-700/30 whitespace-pre-wrap">
+                              {log.metadata.thinking_trace}
+                            </div>
+                          </details>
+                        )}
+                        {log.metadata?.llm_response && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300">
+                              Show LLM response
+                            </summary>
+                            <pre className="text-xs text-slate-300 mt-1 bg-slate-900/50 p-3 rounded border border-slate-700/30 overflow-x-auto max-h-64 overflow-y-auto">
+                              {log.metadata.llm_response}
+                            </pre>
+                          </details>
+                        )}
+                        {log.metadata && !log.metadata.thinking_trace && !log.metadata.llm_response && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300">
+                              Show metadata
+                            </summary>
+                            <pre className="text-xs text-slate-400 mt-1 bg-slate-900/50 p-2 rounded overflow-x-auto">
+                              {JSON.stringify(log.metadata, null, 2)}
+                            </pre>
+                          </details>
+                        )}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-400">
                   <Clock className="h-3 w-3" />

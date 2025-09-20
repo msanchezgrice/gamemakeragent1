@@ -44,33 +44,136 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
 }
 
 async function generateMarketArtifacts(supabaseClient: any, runId: string, brief: any) {
-  const marketData = {
-    trends: ['hypercasual', 'merge', 'idle', 'puzzle', 'arcade'],
-    topGames: ['Subway Surfers', 'Candy Crush Saga', 'Among Us', 'Wordle', 'Clash Royale'],
-    insights: `Market analysis for ${brief.industry} games targeting ${brief.targetAudience || 'general audience'}. Strong preference for ${brief.theme}-themed games with quick-session gameplay.`,
-    competitorAnalysis: {
-      directCompetitors: 3,
-      marketGap: `Opportunity in ${brief.theme} + ${brief.industry} combination`,
-      recommendedFeatures: ['Progressive difficulty', 'Social sharing', 'Achievement system']
-    },
-    marketSize: Math.floor(Math.random() * 50 + 10) + 'M downloads/month',
-    confidence: 0.85
-  };
+  console.log(`🔍 Generating real market research for ${brief.theme} in ${brief.industry}`);
+  
+  // Real LLM call to Claude for market research
+  const marketPrompt = `You are a market research analyst for mobile games. Analyze the market for a ${brief.theme} themed game in the ${brief.industry} industry targeting ${brief.targetAudience || 'general audience'}.
 
-  await supabaseClient
-    .from('orchestrator_artifacts')
-    .insert({
-      run_id: runId,
-      phase: 'market',
-      kind: 'market_scan',
-      path: `runs/${runId}/market_scan.json`,
-      meta: {
-        filename: 'market_scan.json',
-        size: JSON.stringify(marketData).length,
-        contentType: 'application/json',
-        data: marketData
-      }
+Goal: ${brief.goal}
+
+Provide a comprehensive market analysis in JSON format with:
+1. Current market trends (array of strings)
+2. Top 5 competing games (with names and brief descriptions)
+3. Market insights and opportunities
+4. Competitor analysis with gaps identified
+5. Recommended features for this specific theme/industry combo
+6. Estimated market size and confidence level
+
+Return ONLY valid JSON with this structure:
+{
+  "trends": ["trend1", "trend2", ...],
+  "topGames": [{"name": "Game Name", "description": "Brief desc"}, ...],
+  "insights": "Detailed market insights...",
+  "competitorAnalysis": {
+    "directCompetitors": number,
+    "marketGap": "Description of opportunity",
+    "recommendedFeatures": ["feature1", "feature2", ...]
+  },
+  "marketSize": "X million downloads/month",
+  "confidence": 0.0-1.0,
+  "reasoning": "Why this analysis is relevant..."
+}`;
+
+  try {
+    // Make actual LLM API call (using fetch to Claude API)
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: marketPrompt
+        }]
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`LLM API error: ${response.status}`);
+    }
+
+    const llmResult = await response.json();
+    const marketDataText = llmResult.content[0].text;
+    
+    // Parse the JSON response
+    const marketData = JSON.parse(marketDataText);
+    
+    console.log(`✅ Generated real market data:`, marketData);
+
+    // Store thinking trace in logs
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'market',
+        agent: 'market-research-agent',
+        level: 'info',
+        message: `Market research completed for ${brief.theme}`,
+        thinking_trace: marketPrompt,
+        llm_response: marketDataText,
+        created_at: new Date().toISOString()
+      });
+
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'market',
+        kind: 'market_scan',
+        path: `runs/${runId}/market_scan.json`,
+        meta: {
+          filename: 'market_scan.json',
+          size: JSON.stringify(marketData).length,
+          contentType: 'application/json',
+          data: marketData,
+          llm_model: 'claude-3-sonnet-20240229',
+          generated_at: new Date().toISOString()
+        }
+      });
+
+  } catch (error) {
+    console.error(`❌ LLM call failed for market research:`, error);
+    
+    // Fallback to structured placeholder if LLM fails
+    const fallbackData = {
+      trends: ['hypercasual', 'educational', brief.industry.toLowerCase()],
+      topGames: [
+        {name: 'Market Leader 1', description: `Top ${brief.industry} game with ${brief.theme} elements`},
+        {name: 'Market Leader 2', description: `Popular ${brief.targetAudience} focused game`}
+      ],
+      insights: `Market analysis for ${brief.theme} in ${brief.industry}. LLM analysis failed, using structured fallback.`,
+      competitorAnalysis: {
+        directCompetitors: 2,
+        marketGap: `Opportunity in ${brief.theme} + ${brief.industry} combination`,
+        recommendedFeatures: ['Engaging mechanics', 'Clear progression', 'Social features']
+      },
+      marketSize: '15-25 million downloads/month',
+      confidence: 0.6,
+      reasoning: 'Fallback analysis due to LLM API failure'
+    };
+
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'market',
+        kind: 'market_scan',
+        path: `runs/${runId}/market_scan.json`,
+        meta: {
+          filename: 'market_scan.json',
+          size: JSON.stringify(fallbackData).length,
+          contentType: 'application/json',
+          data: fallbackData,
+          fallback: true,
+          error: error.message
+        }
+      });
+  }
 }
 
 async function generateSynthesisArtifacts(supabaseClient: any, runId: string, brief: any) {
@@ -432,7 +535,38 @@ serve(async (req) => {
       )
     }
 
-    if (method === 'POST' && path === '/process-runs') {
+        if (method === 'POST' && path.match(/^\/runs\/[^\/]+\/force-phase$/)) {
+          // Force run a specific phase
+          const runId = path.split('/')[2]
+          const body = await req.json()
+          const { phase } = body
+
+          console.log(`🔧 Force running ${phase} phase for run ${runId}`)
+
+          // Get current run
+          const { data: currentRun, error: fetchError } = await supabaseClient
+            .from('orchestrator_runs')
+            .select('*')
+            .eq('id', runId)
+            .single()
+
+          if (fetchError) {
+            throw fetchError
+          }
+
+          // Generate artifacts for the specified phase
+          await generatePhaseArtifacts(supabaseClient, runId, phase, currentRun.brief)
+
+          return new Response(
+            JSON.stringify({ success: true, message: `${phase} phase forced successfully` }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            }
+          )
+        }
+
+        if (method === 'POST' && path === '/process-runs') {
       // Auto-process queued and running runs
       const { data: queuedRuns, error: queuedError } = await supabaseClient
         .from('orchestrator_runs')

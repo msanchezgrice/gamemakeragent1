@@ -4,15 +4,16 @@ import type { RunRecord } from '@gametok/schemas';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
-import { 
-  FileText, 
-  Activity, 
-  CheckSquare, 
+import {
+  FileText,
+  Activity,
+  CheckSquare,
   Download,
   ExternalLink,
   Clock,
   User,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
@@ -30,7 +31,7 @@ interface RunTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'summary' | 'artifacts' | 'activity' | 'tasks';
+type TabKey = 'summary' | 'artifacts' | 'activity' | 'tasks' | 'controls';
 
 const TABS: Array<{
   key: TabKey;
@@ -41,6 +42,7 @@ const TABS: Array<{
   { key: 'artifacts', label: 'Artifacts', icon: Download },
   { key: 'activity', label: 'Activity', icon: Activity },
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { key: 'controls', label: 'Controls', icon: Settings },
 ];
 
 export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsProps) {
@@ -81,10 +83,11 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} />}
-          {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
-          {activeTab === 'activity' && <ActivityTab run={run} />}
-          {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
+              {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} />}
+              {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
+              {activeTab === 'activity' && <ActivityTab run={run} />}
+              {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
+              {activeTab === 'controls' && <ControlsTab run={run} onRunUpdate={onRunUpdate} />}
         </motion.div>
       </div>
     </div>
@@ -112,16 +115,7 @@ function SummaryTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
             <p className="text-sm text-slate-300">This run is paused pending manual review</p>
           </div>
               <button
-                onClick={() => {
-                  // Switch to artifacts tab for review
-                  const tabsContainer = document.querySelector('[data-tabs-container]');
-                  if (tabsContainer) {
-                    const artifactsTab = tabsContainer.querySelector('[data-tab="artifacts"]') as HTMLButtonElement;
-                    if (artifactsTab) {
-                      artifactsTab.click();
-                    }
-                  }
-                }}
+                onClick={() => setActiveTab('artifacts')}
                 className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors"
               >
                 Review Artifacts
@@ -529,6 +523,108 @@ function InfoCard({ label, value }: { label: string; value: string | number }) {
     <div className="p-4 rounded-2xl border border-slate-800/50 bg-slate-900/40">
       <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
       <p className="text-sm font-medium text-white mt-1">{value}</p>
+    </div>
+  );
+}
+
+function ControlsTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
+  const [isForcing, setIsForcing] = useState<string | null>(null);
+
+  const handleForcePhase = async (phase: string) => {
+    console.log(`🔧 ControlsTab: Forcing ${phase} phase for run:`, run.id);
+    setIsForcing(phase);
+    
+    try {
+      // Call the Edge Function to force generate artifacts for this phase
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ phase })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to force ${phase}: ${response.status}`);
+      }
+
+      console.log(`✅ ControlsTab: Successfully forced ${phase} phase`);
+      onRunUpdate?.();
+    } catch (error) {
+      console.error(`❌ ControlsTab: Failed to force ${phase}:`, error);
+      alert(`Failed to force ${phase} phase. Please try again.`);
+    } finally {
+      setIsForcing(null);
+    }
+  };
+
+  const phases = [
+    { key: 'intake', name: 'Intake', desc: 'Process initial brief and constraints' },
+    { key: 'market', name: 'Market Research', desc: 'Analyze market trends and opportunities' },
+    { key: 'synthesis', name: 'Synthesis', desc: 'Synthesize market data into insights' },
+    { key: 'deconstruct', name: 'Deconstruct', desc: 'Break down winning game concepts' },
+    { key: 'prioritize', name: 'Prioritize', desc: 'Select best opportunities' },
+    { key: 'build', name: 'Build', desc: 'Generate game prototypes' },
+    { key: 'qa', name: 'QA', desc: 'Quality assurance testing' },
+    { key: 'deploy', name: 'Deploy', desc: 'Upload to distribution platform' },
+    { key: 'measure', name: 'Measure', desc: 'Collect performance data' },
+    { key: 'decision', name: 'Decision', desc: 'Evaluate and decide next steps' }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">Phase Controls</h3>
+        <div className="text-sm text-slate-400">
+          Current: <span className="text-primary font-medium">{run.phase}</span>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        {phases.map((phase) => (
+          <div
+            key={phase.key}
+            className={`p-4 rounded-2xl border transition-colors ${
+              phase.key === run.phase 
+                ? 'border-primary/40 bg-primary/10' 
+                : 'border-slate-800/50 bg-slate-900/40 hover:bg-slate-900/60'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-white flex items-center gap-2">
+                  {phase.name}
+                  {phase.key === run.phase && (
+                    <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">
+                      Current
+                    </span>
+                  )}
+                </h4>
+                <p className="text-sm text-slate-400 mt-1">{phase.desc}</p>
+              </div>
+              <button
+                onClick={() => handleForcePhase(phase.key)}
+                disabled={isForcing === phase.key}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50 text-sm"
+              >
+                {isForcing === phase.key ? 'Running...' : 'Force Run'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-4 rounded-2xl border border-slate-700/30 bg-slate-900/30">
+        <h4 className="font-medium text-white mb-2">Debug Information</h4>
+        <div className="text-sm text-slate-400 space-y-1">
+          <div>Status: <span className="text-white">{run.status}</span></div>
+          <div>Phase: <span className="text-white">{run.phase}</span></div>
+          <div>Created: <span className="text-white">{new Date(run.createdAt).toLocaleString()}</span></div>
+          <div>Updated: <span className="text-white">{new Date(run.updatedAt).toLocaleString()}</span></div>
+          <div>Blockers: <span className="text-white">{run.blockers.length}</span></div>
+        </div>
+      </div>
     </div>
   );
 }
