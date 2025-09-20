@@ -3,11 +3,30 @@
 import { supabase } from './supabase';
 import type { RunRecord } from '@gametok/schemas';
 
+type RunWithMetrics = RunRecord & {
+  metrics: {
+    progress: number;
+    playRate?: number;
+    likability?: number;
+  };
+};
+
+function addMetrics(runs: RunRecord[]): RunWithMetrics[] {
+  return runs.map((run) => ({
+    ...run,
+    metrics: {
+      progress: Math.random() * 0.8 + 0.1, // Random progress for now
+      playRate: Math.random() * 0.6 + 0.2,
+      likability: Math.random() * 0.8 + 0.1
+    }
+  }));
+}
+
 const orchestratorBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1/orchestrator-api'
   : null;
 
-export async function loadRuns() {
+export async function loadRuns(): Promise<RunWithMetrics[]> {
   console.log('🔍 loadRuns: Starting to load runs...');
   console.log('🔍 orchestratorBaseUrl:', orchestratorBaseUrl);
   console.log('🔍 SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -30,10 +49,10 @@ export async function loadRuns() {
         
         if (response.ok) {
           const runs = await response.json();
-          console.log('✅ Edge Function success, runs count:', runs.length);
-          const transformed = transformSupabaseRuns(runs);
-          console.log('✅ Transformed runs:', transformed.length);
-          return transformed;
+        console.log('✅ Edge Function success, runs count:', runs.length);
+        const transformed = transformSupabaseRuns(runs);
+        console.log('✅ Transformed runs:', transformed.length);
+        return addMetrics(transformed);
         } else {
           const errorText = await response.text();
           console.warn('⚠️ Edge Function failed, status:', response.status, 'error:', errorText);
@@ -68,10 +87,10 @@ export async function loadRuns() {
       return [];
     }
 
-    console.log('✅ Direct Supabase success, runs count:', runs.length);
-    const transformed = transformSupabaseRuns(runs);
-    console.log('✅ Final transformed runs:', transformed.length);
-    return transformed;
+      console.log('✅ Direct Supabase success, runs count:', runs.length);
+      const transformed = transformSupabaseRuns(runs);
+      console.log('✅ Final transformed runs:', transformed.length);
+      return addMetrics(transformed);
   } catch (error) {
     console.error('❌ Failed to load runs:', error);
     console.log('🔄 Returning empty array due to error');

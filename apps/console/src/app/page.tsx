@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { loadRuns } from '../lib/data-source';
-import { withMetrics } from '../lib/mock-data';
 import { DashboardWithFilters } from './components/dashboard-with-filters';
 import { RunCardSkeleton } from '../components/skeleton';
 import type { RunRecord } from '@gametok/schemas';
@@ -16,7 +15,7 @@ export default function DashboardPage() {
     console.log('🏠 Dashboard: Loading runs...');
     setLoading(true);
     try {
-      const fetchedRuns = withMetrics(await loadRuns());
+        const fetchedRuns = await loadRuns();
       console.log('🏠 Dashboard: Loaded runs count:', fetchedRuns.length);
       console.log('🏠 Dashboard: Run themes:', fetchedRuns.map(r => r.brief.theme));
       console.log('🏠 Dashboard: Setting runs state with:', fetchedRuns);

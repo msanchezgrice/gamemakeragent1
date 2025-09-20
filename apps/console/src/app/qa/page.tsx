@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { loadRuns } from '../../lib/data-source';
-import { withMetrics } from '../../lib/mock-data';
 import { QATable } from './components/qa-table';
 import { QAStats } from './components/qa-stats';
 import { QATableSkeleton } from '../../components/skeleton';
@@ -15,7 +14,7 @@ export default function QADashboard() {
   useEffect(() => {
     async function fetchRuns() {
       try {
-        const fetchedRuns = withMetrics(await loadRuns());
+        const fetchedRuns = await loadRuns();
         setRuns(fetchedRuns);
       } catch (error) {
         console.error('❌ QA Dashboard: Failed to load runs:', error);

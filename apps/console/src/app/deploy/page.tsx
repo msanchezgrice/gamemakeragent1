@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { loadRuns } from '../../lib/data-source';
-import { withMetrics } from '../../lib/mock-data';
 import { DeploymentBoard } from './components/deployment-board';
 import { DeploymentBoardSkeleton } from '../../components/skeleton';
 import type { RunRecord } from '@gametok/schemas';
@@ -14,7 +13,7 @@ export default function DeployPage() {
   useEffect(() => {
     async function fetchRuns() {
       try {
-        const fetchedRuns = withMetrics(await loadRuns());
+        const fetchedRuns = await loadRuns();
         setRuns(fetchedRuns);
       } catch (error) {
         console.error('❌ Deploy Page: Failed to load runs:', error);

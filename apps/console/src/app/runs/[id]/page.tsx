@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { loadRuns } from '../../../lib/data-source';
-import { withMetrics } from '../../../lib/mock-data';
 import { RunTimeline } from './components/run-timeline';
 import { RunTabs } from './components/run-tabs';
 import { TimelineSkeleton } from '../../../components/skeleton';
@@ -75,7 +74,7 @@ export default function RunDetailPage() {
         
         // Fallback to loadRuns if direct query fails
         console.log('🔄 RunDetailPage: Falling back to loadRuns...');
-        const runs = withMetrics(await loadRuns());
+        const runs = await loadRuns();
         console.log('🔍 RunDetailPage: Total runs loaded:', runs.length);
         console.log('🔍 RunDetailPage: Available run IDs:', runs.map(r => r.id));
         
