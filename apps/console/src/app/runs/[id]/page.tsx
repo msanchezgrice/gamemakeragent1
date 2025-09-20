@@ -16,6 +16,8 @@ export default function RunDetailPage() {
   const [run, setRun] = useState<(RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchRun = useCallback(async () => {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
@@ -103,6 +105,35 @@ export default function RunDetailPage() {
     await fetchRun();
   };
 
+  const handleDeleteRun = async () => {
+    if (!run) return;
+    
+    setDeleting(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete run: ${response.status}`);
+      }
+
+      console.log('✅ Run deleted successfully');
+      // Redirect to dashboard
+      window.location.href = '/';
+    } catch (error) {
+      console.error('❌ Failed to delete run:', error);
+      alert('Failed to delete run. Please try again.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   useEffect(() => {
     fetchRun();
   }, [fetchRun]);
@@ -121,6 +152,34 @@ export default function RunDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-white mb-2">Delete Run</h3>
+            <p className="text-slate-300 mb-4">
+              Are you sure you want to delete "{run?.brief.theme}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteRun}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     );
   }
 
@@ -156,14 +215,20 @@ export default function RunDetailPage() {
             <h1 className="text-3xl font-semibold text-white">{run.brief.theme}</h1>
             <p className="text-slate-300 mt-2">{run.brief.goal}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(run.status)}`}>
-              {run.status.replace('_', ' ')}
-            </span>
-            <span className="px-4 py-2 rounded-full text-sm font-medium bg-slate-800/50 text-slate-300 border border-slate-700/50">
-              {run.phase}
-            </span>
-          </div>
+              <div className="flex items-center gap-4">
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(run.status)}`}>
+                  {run.status.replace('_', ' ')}
+                </span>
+                <span className="px-4 py-2 rounded-full text-sm font-medium bg-slate-800/50 text-slate-300 border border-slate-700/50">
+                  {run.phase}
+                </span>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                >
+                  Delete Run
+                </button>
+              </div>
         </div>
       </header>
 

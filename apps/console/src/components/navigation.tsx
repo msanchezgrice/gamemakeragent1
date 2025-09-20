@@ -2,13 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  Home, 
-  TestTube, 
-  Rocket, 
+import {
+  Home,
+  TestTube,
+  Rocket,
   Plus,
-  Search,
-  Bell,
   Activity
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -68,17 +66,9 @@ export function Navigation() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors">
-              <Search className="h-4 w-4" />
-            </button>
-            <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-warning rounded-full text-[10px] flex items-center justify-center text-black font-bold">
-                3
-              </span>
-            </button>
-          </div>
+              <div className="flex items-center gap-3">
+                {/* Removed non-functional search and notification icons */}
+              </div>
         </div>
       </div>
     </nav>

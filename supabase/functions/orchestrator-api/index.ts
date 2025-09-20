@@ -239,12 +239,14 @@ serve(async (req) => {
         .from('orchestrator_runs')
         .select(`
           *,
-          blockers:orchestrator_manual_tasks!inner(*)
+          blockers:orchestrator_manual_tasks(*)
         `)
-        .eq('blockers.status', 'open')
         .order('created_at', { ascending: false })
 
+      console.log('🔍 Runs query result:', { runs: runs?.length, error })
+
       if (error) {
+        console.error('❌ Runs query error:', error)
         throw error
       }
 
@@ -367,9 +369,44 @@ serve(async (req) => {
       )
     }
 
-    if (method === 'POST' && path.match(/^\/tasks\/[^\/]+\/complete$/)) {
-      // Complete manual task
-      const taskId = path.split('/')[2]
+        if (method === 'DELETE' && path.match(/^\/runs\/[^\/]+$/)) {
+          // Delete run
+          const runId = path.split('/')[2]
+
+          // Delete associated tasks first
+          await supabaseClient
+            .from('orchestrator_manual_tasks')
+            .delete()
+            .eq('run_id', runId)
+
+          // Delete associated artifacts
+          await supabaseClient
+            .from('orchestrator_artifacts')
+            .delete()
+            .eq('run_id', runId)
+
+          // Delete the run
+          const { error } = await supabaseClient
+            .from('orchestrator_runs')
+            .delete()
+            .eq('id', runId)
+
+          if (error) {
+            throw error
+          }
+
+          return new Response(
+            JSON.stringify({ success: true, message: 'Run deleted successfully' }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            }
+          )
+        }
+
+        if (method === 'POST' && path.match(/^\/tasks\/[^\/]+\/complete$/)) {
+          // Complete manual task
+          const taskId = path.split('/')[2]
       
       const { data: task, error } = await supabaseClient
         .from('orchestrator_manual_tasks')
