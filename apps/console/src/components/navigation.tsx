@@ -7,7 +7,8 @@ import {
   TestTube,
   Rocket,
   Plus,
-  Activity
+  Activity,
+  Search
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
