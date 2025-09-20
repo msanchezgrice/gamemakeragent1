@@ -376,7 +376,9 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
                       Show content
                     </summary>
                     <pre className="text-xs text-slate-300 mt-2 bg-slate-900/50 p-3 rounded border border-slate-700/30 overflow-x-auto max-h-64 overflow-y-auto">
-                      {typeof artifact.meta.data === 'string' ? artifact.meta.data : JSON.stringify(artifact.meta.data, null, 2)}
+                      {typeof artifact.meta.data === 'string' 
+                        ? artifact.meta.data 
+                        : JSON.stringify(artifact.meta.data, null, 2)}
                     </pre>
                   </details>
                 )}
