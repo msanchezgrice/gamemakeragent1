@@ -237,12 +237,33 @@ function getEstimatedCompletion(phase: string): string {
   return estimates[phase as keyof typeof estimates] || 'Unknown';
 }
 
-function StageTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
+interface ArtifactData {
+  id: string;
+  phase: string;
+  kind: string;
+  created_at: string;
+  meta?: {
+    filename?: string;
+    size?: number;
+    data?: any;
+    contentType?: string;
+  };
+}
+
+interface LogData {
+  id: string;
+  level: string;
+  message: string;
+  thinking_trace?: string;
+  agent: string;
+}
+
+function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
   const [stageData, setStageData] = useState<{
-    artifacts: any[];
-    inputs: any[];
-    decisions: any[];
-    context: any[];
+    artifacts: ArtifactData[];
+    inputs: ArtifactData[];
+    decisions: LogData[];
+    context: LogData[];
   }>({
     artifacts: [],
     inputs: [],
@@ -282,8 +303,8 @@ function StageTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => vo
         }
 
         // Organize data by relevance to current stage
-        const currentPhaseArtifacts = artifacts?.filter((a: any) => a.phase === run.phase) || [];
-        const previousPhaseArtifacts = artifacts?.filter((a: any) => a.phase !== run.phase) || [];
+        const currentPhaseArtifacts = artifacts?.filter((a: ArtifactData) => a.phase === run.phase) || [];
+        const previousPhaseArtifacts = artifacts?.filter((a: ArtifactData) => a.phase !== run.phase) || [];
         
         setStageData({
           artifacts: currentPhaseArtifacts,
@@ -472,7 +493,7 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
         console.log('🎨 ArtifactsTab: Raw DB artifacts:', dbArtifacts);
         console.log('🎨 ArtifactsTab: Run ID:', run.id);
 
-        const realArtifacts = (dbArtifacts || []).map((artifact: any) => ({
+        const realArtifacts = (dbArtifacts || []).map((artifact: ArtifactData) => ({
           id: artifact.id,
           name: artifact.meta?.filename || `${artifact.kind}.${artifact.meta?.contentType?.includes('json') ? 'json' : 'md'}`,
           phase: artifact.phase,
