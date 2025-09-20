@@ -370,7 +370,7 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
                     {artifact.phase}
                   </span>
                 </div>
-                {artifact.meta?.data && (
+                {artifact.meta?.data && (typeof artifact.meta.data === 'string' || typeof artifact.meta.data === 'object') && (
                   <details className="mt-3">
                     <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
                       Show content
