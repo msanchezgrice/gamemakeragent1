@@ -7,7 +7,7 @@ import { RunTimeline } from './components/run-timeline';
 import { RunTabs } from './components/run-tabs';
 import { TimelineSkeleton } from '../../../components/skeleton';
 import { supabase } from '../../../lib/supabase';
-import type { RunRecord } from '@gametok/schemas';
+import type { RunRecord, RunPhase } from '@gametok/schemas';
 
 export default function RunDetailPage() {
   const params = useParams();
@@ -18,7 +18,7 @@ export default function RunDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string | undefined>(undefined);
+  const [selectedStage, setSelectedStage] = useState<RunPhase | undefined>(undefined);
 
   const fetchRun = useCallback(async () => {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
@@ -210,7 +210,7 @@ export default function RunDetailPage() {
         <div>
           <RunTimeline 
             run={run} 
-            selectedStage={selectedStage as any}
+            selectedStage={selectedStage}
             onStageSelect={setSelectedStage}
           />
         </div>
