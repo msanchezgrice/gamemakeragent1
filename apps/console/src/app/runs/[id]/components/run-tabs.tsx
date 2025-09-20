@@ -363,37 +363,94 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
 }
 
 function ActivityTab({ run }: { run: RunRecord }) {
-  // Real activity based on run status and phase changes
-  const activities = [
-    {
-      id: 'run_created',
-      type: 'run_created',
-      message: 'Run initialized',
-      timestamp: run.createdAt,
-      details: `Started ${run.brief.theme} development pipeline`
-    },
-    ...(run.status === 'running' ? [{
-      id: 'phase_active',
-      type: 'phase_change',
-      message: `Currently processing ${run.phase} phase`,
-      timestamp: run.updatedAt,
-      details: `Agents are working on ${run.phase} requirements`
-    }] : []),
-    ...(run.status === 'awaiting_human' ? [{
-      id: 'awaiting_review',
-      type: 'task_created',
-      message: 'Human review required',
-      timestamp: run.updatedAt,
-      details: `Run paused in ${run.phase} phase pending manual approval`
-    }] : []),
-    ...(run.status === 'done' ? [{
-      id: 'run_completed',
-      type: 'run_completed',
-      message: 'Run completed successfully',
-      timestamp: run.updatedAt,
-      details: 'All phases completed, game ready for deployment'
-    }] : [])
-  ];
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      console.log(`📋 ActivityTab: Fetching activities for run ${run.id}`);
+      try {
+        // Fetch real activities from orchestrator_logs
+        const { data: logs, error } = await supabase
+          .from('orchestrator_logs')
+          .select('*')
+          .eq('run_id', run.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ ActivityTab: Failed to fetch logs:', error);
+          setActivities([]);
+          return;
+        }
+
+        // Convert logs to activity format
+        const logActivities = logs?.map((log: any) => ({
+          id: log.id,
+          type: log.level === 'error' ? 'error' : 'agent_activity',
+          message: log.message,
+          timestamp: log.created_at,
+          details: log.thinking_trace || 'Agent processing...',
+          agent: log.agent,
+          phase: log.phase,
+          llm_response: log.llm_response
+        })) || [];
+
+        // Add basic run status activities
+        const statusActivities = [
+          {
+            id: 'run_created',
+            type: 'run_created',
+            message: 'Run initialized',
+            timestamp: run.createdAt,
+            details: `Started ${run.brief.theme} development pipeline`,
+            agent: 'orchestrator',
+            phase: 'intake'
+          },
+          ...(run.status === 'running' ? [{
+            id: 'phase_active',
+            type: 'phase_change',
+            message: `Currently processing ${run.phase} phase`,
+            timestamp: run.updatedAt,
+            details: `Agents are working on ${run.phase} requirements`,
+            agent: 'orchestrator',
+            phase: run.phase
+          }] : []),
+          ...(run.status === 'awaiting_human' ? [{
+            id: 'awaiting_review',
+            type: 'task_created',
+            message: 'Human review required',
+            timestamp: run.updatedAt,
+            details: `Run paused in ${run.phase} phase pending manual approval`,
+            agent: 'orchestrator',
+            phase: run.phase
+          }] : []),
+          ...(run.status === 'done' ? [{
+            id: 'run_completed',
+            type: 'run_completed',
+            message: 'Run completed successfully',
+            timestamp: run.updatedAt,
+            details: 'All phases completed, game ready for deployment',
+            agent: 'orchestrator',
+            phase: run.phase
+          }] : [])
+        ];
+
+        // Combine and sort all activities
+        const allActivities = [...logActivities, ...statusActivities]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        console.log(`✅ ActivityTab: Loaded ${allActivities.length} activities (${logActivities.length} from logs, ${statusActivities.length} status)`);
+        setActivities(allActivities);
+      } catch (error) {
+        console.error('❌ ActivityTab: Error fetching activities:', error);
+        setActivities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, [run.id, run.status, run.phase, run.updatedAt]);
 
   return (
     <div className="space-y-4">
