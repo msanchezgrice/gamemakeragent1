@@ -115,7 +115,7 @@ function SummaryTab({ run, setActiveTab }: { run: RunRecord; onRunUpdate?: () =>
             <p className="text-sm text-slate-300">This run is paused pending manual review</p>
           </div>
               <button
-                onClick={() => setActiveTab('artifacts')}
+                onClick={() => setActiveTab?.('artifacts')}
                 className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors"
               >
                 Review Artifacts
