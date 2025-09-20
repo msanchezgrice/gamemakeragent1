@@ -13,7 +13,8 @@ import {
   Clock,
   User,
   CheckCircle,
-  Settings
+  Settings,
+  Layers
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
@@ -31,7 +32,7 @@ interface RunTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'summary' | 'artifacts' | 'activity' | 'tasks' | 'controls';
+type TabKey = 'summary' | 'stage' | 'artifacts' | 'activity' | 'tasks' | 'controls';
 
 const TABS: Array<{
   key: TabKey;
@@ -39,6 +40,7 @@ const TABS: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { key: 'summary', label: 'Summary', icon: FileText },
+  { key: 'stage', label: 'Stage', icon: Layers },
   { key: 'artifacts', label: 'Artifacts', icon: Download },
   { key: 'activity', label: 'Activity', icon: Activity },
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
@@ -83,11 +85,12 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-              {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} setActiveTab={setActiveTab} />}
-              {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
-              {activeTab === 'activity' && <ActivityTab run={run} />}
-              {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
-              {activeTab === 'controls' && <ControlsTab run={run} onRunUpdate={onRunUpdate} />}
+                {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} setActiveTab={setActiveTab} />}
+                {activeTab === 'stage' && <StageTab run={run} onRunUpdate={onRunUpdate} />}
+                {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
+                {activeTab === 'activity' && <ActivityTab run={run} />}
+                {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
+                {activeTab === 'controls' && <ControlsTab run={run} onRunUpdate={onRunUpdate} />}
         </motion.div>
       </div>
     </div>
@@ -234,6 +237,209 @@ function getEstimatedCompletion(phase: string): string {
   return estimates[phase as keyof typeof estimates] || 'Unknown';
 }
 
+function StageTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
+  const [stageData, setStageData] = useState<{
+    artifacts: any[];
+    inputs: any[];
+    decisions: any[];
+    context: any[];
+  }>({
+    artifacts: [],
+    inputs: [],
+    decisions: [],
+    context: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStageData = async () => {
+      console.log(`🎭 StageTab: Fetching stage data for ${run.phase} phase of run ${run.id}`);
+      try {
+        // Fetch artifacts via Edge Function API
+        const artifactsResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/artifacts`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let artifacts = [];
+        if (artifactsResponse.ok) {
+          artifacts = await artifactsResponse.json();
+        } else {
+          console.error('❌ StageTab: Failed to fetch artifacts:', artifactsResponse.status);
+        }
+
+        // Fetch logs for context (direct Supabase query for now)
+        const { data: logs, error: logsError } = await supabase
+          .from('orchestrator_logs')
+          .select('*')
+          .eq('run_id', run.id)
+          .order('created_at', { ascending: false });
+
+        if (logsError) {
+          console.error('❌ StageTab: Failed to fetch logs:', logsError);
+        }
+
+        // Organize data by relevance to current stage
+        const currentPhaseArtifacts = artifacts?.filter(a => a.phase === run.phase) || [];
+        const previousPhaseArtifacts = artifacts?.filter(a => a.phase !== run.phase) || [];
+        
+        setStageData({
+          artifacts: currentPhaseArtifacts,
+          inputs: previousPhaseArtifacts,
+          decisions: logs?.filter(l => l.level === 'info' && l.message.includes('completed')) || [],
+          context: logs?.filter(l => l.thinking_trace) || []
+        });
+
+        console.log(`✅ StageTab: Loaded stage data - ${currentPhaseArtifacts.length} current artifacts, ${previousPhaseArtifacts.length} inputs, ${logs?.length || 0} logs`);
+      } catch (error) {
+        console.error('❌ StageTab: Error fetching stage data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStageData();
+  }, [run.id, run.phase]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">{run.phase.charAt(0).toUpperCase() + run.phase.slice(1)} Stage</h3>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading stage content...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">
+          {run.phase.charAt(0).toUpperCase() + run.phase.slice(1)} Stage
+        </h3>
+        <span className="text-sm text-slate-400">
+          Phase {PHASES.findIndex(p => p.key === run.phase) + 1} of {PHASES.length}
+        </span>
+      </div>
+
+      {/* Current Phase Outputs */}
+      {stageData.artifacts.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium text-white flex items-center gap-2">
+            <Download className="h-4 w-4 text-primary" />
+            Current Phase Outputs ({stageData.artifacts.length})
+          </h4>
+          <div className="grid gap-3">
+            {stageData.artifacts.map((artifact) => (
+              <div key={artifact.id} className="p-4 rounded-2xl border border-primary/30 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="font-medium text-white">
+                      {artifact.meta?.filename || `${artifact.kind}.json`}
+                    </h5>
+                    <p className="text-sm text-slate-400">
+                      {artifact.kind} • {artifact.meta?.size ? `${Math.round(artifact.meta.size / 1024 * 10) / 10} KB` : 'Unknown size'}
+                    </p>
+                  </div>
+                  <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">
+                    {artifact.phase}
+                  </span>
+                </div>
+                {artifact.meta?.data && (
+                  <details className="mt-3">
+                    <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
+                      Show content
+                    </summary>
+                    <pre className="text-xs text-slate-300 mt-2 bg-slate-900/50 p-3 rounded border border-slate-700/30 overflow-x-auto max-h-64 overflow-y-auto">
+                      {typeof artifact.meta.data === 'string' ? artifact.meta.data : JSON.stringify(artifact.meta.data, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Previous Phase Inputs */}
+      {stageData.inputs.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium text-white flex items-center gap-2">
+            <Layers className="h-4 w-4 text-blue-400" />
+            Previous Phase Inputs ({stageData.inputs.length})
+          </h4>
+          <div className="grid gap-3">
+            {stageData.inputs.map((input) => (
+              <div key={input.id} className="p-4 rounded-2xl border border-blue-400/30 bg-blue-400/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="font-medium text-white">
+                      {input.meta?.filename || `${input.kind}.json`}
+                    </h5>
+                    <p className="text-sm text-slate-400">
+                      From {input.phase} phase • {input.kind}
+                    </p>
+                  </div>
+                  <span className="text-xs px-2 py-1 bg-blue-400/20 text-blue-400 rounded-full">
+                    Input
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Agent Decisions & Context */}
+      {stageData.context.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium text-white flex items-center gap-2">
+            <Activity className="h-4 w-4 text-green-400" />
+            Agent Context ({stageData.context.length})
+          </h4>
+          <div className="grid gap-3">
+            {stageData.context.slice(0, 3).map((context) => (
+              <div key={context.id} className="p-4 rounded-2xl border border-green-400/30 bg-green-400/5">
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="font-medium text-white">{context.message}</h5>
+                  <span className="text-xs px-2 py-1 bg-green-400/20 text-green-400 rounded-full">
+                    {context.agent}
+                  </span>
+                </div>
+                {context.thinking_trace && (
+                  <details>
+                    <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
+                      Show thinking process
+                    </summary>
+                    <div className="text-xs text-slate-300 mt-2 bg-slate-900/50 p-3 rounded border border-slate-700/30 max-h-32 overflow-y-auto">
+                      {context.thinking_trace}
+                    </div>
+                  </details>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {stageData.artifacts.length === 0 && stageData.inputs.length === 0 && stageData.context.length === 0 && (
+        <div className="text-center py-12">
+          <Layers className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <h4 className="text-lg font-medium text-slate-400 mb-2">No Stage Content Yet</h4>
+          <p className="text-slate-500">
+            Content will appear here as the {run.phase} phase progresses.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ArtifactsTab({ run }: { run: RunRecord }) {
   const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<Array<{
@@ -250,17 +456,19 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
   useEffect(() => {
     async function fetchArtifacts() {
       try {
-        // Fetch real artifacts from Supabase
-        const { data: dbArtifacts, error } = await supabase
-          .from('orchestrator_artifacts')
-          .select('*')
-          .eq('run_id', run.id)
-          .order('created_at', { ascending: false });
+        // Fetch artifacts via Edge Function API to avoid CORS issues
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/artifacts`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-        if (error) {
-          console.error('Failed to load artifacts:', error);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch artifacts: ${response.status}`);
         }
 
+        const dbArtifacts = await response.json();
         console.log('🎨 ArtifactsTab: Raw DB artifacts:', dbArtifacts);
         console.log('🎨 ArtifactsTab: Run ID:', run.id);
 

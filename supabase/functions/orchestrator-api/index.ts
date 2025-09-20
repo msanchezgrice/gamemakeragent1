@@ -585,7 +585,30 @@ serve(async (req) => {
           )
         }
 
-        if (method === 'POST' && path === '/process-runs') {
+          if (method === 'GET' && path.match(/^\/runs\/[^\/]+\/artifacts$/)) {
+            // Get artifacts for a specific run
+            const runId = path.split('/')[2]
+
+            const { data: artifacts, error } = await supabaseClient
+              .from('orchestrator_artifacts')
+              .select('*')
+              .eq('run_id', runId)
+              .order('created_at', { ascending: false })
+
+            if (error) {
+              throw error
+            }
+
+            return new Response(
+              JSON.stringify(artifacts || []),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              }
+            )
+          }
+
+          if (method === 'POST' && path === '/process-runs') {
       // Auto-process queued and running runs
       const { data: queuedRuns, error: queuedError } = await supabaseClient
         .from('orchestrator_runs')
