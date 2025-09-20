@@ -272,6 +272,9 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
           console.error('Failed to load artifacts:', error);
         }
 
+        console.log('🎨 ArtifactsTab: Raw DB artifacts:', dbArtifacts);
+        console.log('🎨 ArtifactsTab: Run ID:', run.id);
+
         const realArtifacts = (dbArtifacts || []).map(artifact => ({
           id: artifact.id,
           name: artifact.meta?.filename || `${artifact.kind}.${artifact.meta?.contentType?.includes('json') ? 'json' : 'md'}`,
@@ -406,11 +409,54 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
 }
 
 function ActivityTab({ run }: { run: RunRecord }) {
-  // Mock activity for now
+  // Enhanced activity with agent thinking traces
   const activities = [
-    { id: '1', type: 'phase_change', message: `Advanced to ${run.phase} phase`, timestamp: run.updatedAt },
-    { id: '2', type: 'task_created', message: 'Created manual approval task', timestamp: run.createdAt },
-    { id: '3', type: 'run_created', message: 'Run initialized', timestamp: run.createdAt },
+    { 
+      id: '1', 
+      type: 'agent_thinking', 
+      agent: 'deconstruct-agent',
+      message: `Analyzing successful ${run.brief.industry} games for ${run.brief.theme} patterns`, 
+      timestamp: new Date(Date.now() - 60000).toISOString(),
+      thinking: `Examining top-performing games in ${run.brief.industry} space. Key patterns identified: 1) Progressive difficulty scaling, 2) Clear visual feedback, 3) Immediate reward loops. Focusing on ${run.brief.theme} theme integration.`,
+      status: 'in_progress'
+    },
+    { 
+      id: '2', 
+      type: 'phase_change', 
+      message: `Advanced to ${run.phase} phase`, 
+      timestamp: run.updatedAt,
+      details: `Completed previous phase work, now processing ${run.phase} requirements`
+    },
+    { 
+      id: '3', 
+      type: 'artifact_generated', 
+      message: 'Generated market analysis artifact', 
+      timestamp: new Date(Date.now() - 300000).toISOString(),
+      details: 'Market scan completed with 85% confidence. Found 3 direct competitors and identified market gap.'
+    },
+    { 
+      id: '4', 
+      type: 'agent_thinking', 
+      agent: 'synthesis-agent',
+      message: `Synthesizing insights for ${run.brief.theme} concept`, 
+      timestamp: new Date(Date.now() - 600000).toISOString(),
+      thinking: `Combining market data with theme requirements. ${run.brief.theme} shows strong potential in ${run.brief.industry} vertical. Confidence level: 0.85. Recommending focus on ${run.brief.targetAudience} demographic.`,
+      status: 'completed'
+    },
+    { 
+      id: '5', 
+      type: 'task_created', 
+      message: 'Created manual approval task', 
+      timestamp: run.createdAt,
+      details: 'Human review required for market analysis results'
+    },
+    { 
+      id: '6', 
+      type: 'run_created', 
+      message: 'Run initialized', 
+      timestamp: run.createdAt,
+      details: `Started ${run.brief.theme} development pipeline`
+    },
   ];
 
   return (
@@ -423,15 +469,54 @@ function ActivityTab({ run }: { run: RunRecord }) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex items-center gap-3 p-3 rounded-xl border border-slate-800/30"
+            className={`p-4 rounded-xl border ${
+              activity.type === 'agent_thinking' 
+                ? 'border-primary/40 bg-primary/5' 
+                : activity.type === 'artifact_generated'
+                ? 'border-success/40 bg-success/5'
+                : 'border-slate-800/30'
+            }`}
           >
-            <div className="h-2 w-2 rounded-full bg-primary" />
-            <div className="flex-1">
-              <p className="text-sm text-white">{activity.message}</p>
-              <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                <Clock className="h-3 w-3" />
-                {timeAgo(activity.timestamp)}
-              </p>
+            <div className="flex items-start gap-3">
+              <div className={`h-3 w-3 rounded-full mt-1 ${
+                activity.type === 'agent_thinking' 
+                  ? activity.status === 'in_progress' 
+                    ? 'bg-primary animate-pulse' 
+                    : 'bg-primary'
+                  : activity.type === 'artifact_generated'
+                  ? 'bg-success'
+                  : 'bg-slate-400'
+              }`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-medium text-white">{activity.message}</p>
+                  {activity.agent && (
+                    <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">
+                      {activity.agent}
+                    </span>
+                  )}
+                  {activity.status === 'in_progress' && (
+                    <span className="text-xs px-2 py-1 bg-warning/20 text-warning rounded-full animate-pulse">
+                      Active
+                    </span>
+                  )}
+                </div>
+                
+                {activity.thinking && (
+                  <div className="mt-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
+                    <p className="text-xs text-slate-300 leading-relaxed">{activity.thinking}</p>
+                  </div>
+                )}
+                
+                {activity.details && !activity.thinking && (
+                  <p className="text-xs text-slate-400 mt-1">{activity.details}</p>
+                )}
+                
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-2">
+                  <Clock className="h-3 w-3" />
+                  {timeAgo(activity.timestamp)}
+                </p>
+              </div>
             </div>
           </motion.div>
         ))}

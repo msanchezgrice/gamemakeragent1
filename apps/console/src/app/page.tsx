@@ -32,9 +32,9 @@ export default function DashboardPage() {
     fetchRuns();
   }, []);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 10 seconds for more responsive updates
   useEffect(() => {
-    const interval = setInterval(fetchRuns, 30000);
+    const interval = setInterval(fetchRuns, 10000);
     return () => clearInterval(interval);
   }, []);
 

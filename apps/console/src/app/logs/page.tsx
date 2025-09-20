@@ -56,6 +56,7 @@ export default function LogsPage() {
           message: `Run ${run.id.slice(0, 8)} (${run.brief?.theme || 'Unknown'}) is ${run.status} in ${run.phase} phase`,
           runId: run.id,
           phase: run.phase,
+          projectName: run.brief?.theme || 'Unknown Project',
           metadata: { 
             status: run.status, 
             phase: run.phase, 
@@ -273,9 +274,12 @@ export default function LogsPage() {
                   <div className="flex items-center gap-3 mb-1">
                     <span className="font-medium text-white">{log.service}</span>
                     {log.runId && (
-                      <span className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded">
+                      <a 
+                        href={`/runs/${log.runId}`}
+                        className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition-colors"
+                      >
                         Run: {log.runId.slice(0, 8)}
-                      </span>
+                      </a>
                     )}
                     {log.phase && (
                       <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
@@ -284,6 +288,11 @@ export default function LogsPage() {
                     )}
                   </div>
                   <p className="text-slate-300 text-sm">{log.message}</p>
+                  {log.projectName && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Project: <span className="text-slate-300">{log.projectName}</span>
+                    </p>
+                  )}
                   {log.metadata && (
                     <details className="mt-2">
                       <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300">
