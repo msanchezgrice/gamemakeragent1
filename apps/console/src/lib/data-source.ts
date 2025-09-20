@@ -12,14 +12,51 @@ type RunWithMetrics = RunRecord & {
 };
 
 function addMetrics(runs: RunRecord[]): RunWithMetrics[] {
-  return runs.map((run) => ({
-    ...run,
-    metrics: {
-      progress: Math.random() * 0.8 + 0.1, // Random progress for now
-      playRate: Math.random() * 0.6 + 0.2,
-      likability: Math.random() * 0.8 + 0.1
-    }
-  }));
+  return runs.map((run) => {
+    const phaseProgress = calculatePhaseProgress(run.phase, run.status);
+    return {
+      ...run,
+      metrics: {
+        progress: phaseProgress,
+        playRate: run.status === 'done' ? Math.random() * 0.6 + 0.3 : undefined,
+        likability: run.status === 'done' ? Math.random() * 0.8 + 0.2 : undefined
+      }
+    };
+  });
+}
+
+function calculatePhaseProgress(phase: string, status: string): number {
+  const phaseOrder = ['intake', 'market', 'synthesis', 'deconstruct', 'prioritize', 'build', 'qa', 'deploy', 'measure', 'decision'];
+  const currentPhaseIndex = phaseOrder.indexOf(phase);
+  
+  if (currentPhaseIndex === -1) return 0;
+  
+  // Base progress from completed phases
+  const baseProgress = currentPhaseIndex / phaseOrder.length;
+  
+  // Add progress within current phase based on status
+  let phaseProgress = 0;
+  switch (status) {
+    case 'queued':
+      phaseProgress = 0;
+      break;
+    case 'running':
+      phaseProgress = 0.5; // 50% through current phase
+      break;
+    case 'awaiting_human':
+      phaseProgress = 0.8; // 80% through current phase, waiting for approval
+      break;
+    case 'done':
+      return 1.0; // 100% complete
+    case 'failed':
+      return baseProgress; // Stuck at current phase
+    default:
+      phaseProgress = 0.3; // Default partial progress
+  }
+  
+  // Add the within-phase progress
+  const phaseWeight = 1 / phaseOrder.length;
+  return Math.min(baseProgress + (phaseProgress * phaseWeight), 1.0);
 }
 
 const orchestratorBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL 

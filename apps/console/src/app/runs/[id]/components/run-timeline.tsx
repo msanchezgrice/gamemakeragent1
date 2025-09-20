@@ -83,10 +83,27 @@ export function RunTimeline({ run }: RunTimelineProps) {
               <div className={cn(
                 "relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300",
                 isCompleted && "bg-primary border-primary text-white",
-                isCurrent && "bg-warning border-warning text-black animate-pulse",
+                isCurrent && "bg-warning border-warning text-black",
                 isPending && "bg-slate-800 border-slate-700 text-slate-500"
               )}>
-                <phase.icon className="h-5 w-5" />
+                {isCurrent && run.status === 'running' ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="h-5 w-5 border-2 border-black/30 border-t-black rounded-full"
+                  />
+                ) : (
+                  <phase.icon className="h-5 w-5" />
+                )}
+                
+                {/* Pulse animation for current phase */}
+                {isCurrent && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-warning"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                )}
               </div>
               
               {/* Phase content */}

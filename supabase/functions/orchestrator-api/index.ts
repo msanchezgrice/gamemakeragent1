@@ -77,10 +77,60 @@ serve(async (req) => {
       // Advance run to next phase
       const runId = path.split('/')[2]
       
+      // Get current run
+      const { data: currentRun, error: fetchError } = await supabaseClient
+        .from('orchestrator_runs')
+        .select('*')
+        .eq('id', runId)
+        .single()
+
+      if (fetchError) {
+        throw fetchError
+      }
+
+      // Determine next phase and status
+      const phaseOrder = ['intake', 'market', 'synthesis', 'deconstruct', 'prioritize', 'build', 'qa', 'deploy', 'measure', 'decision']
+      const currentPhaseIndex = phaseOrder.indexOf(currentRun.phase)
+      
+      let nextPhase = currentRun.phase
+      let nextStatus = 'running'
+      
+      if (currentRun.status === 'queued') {
+        nextStatus = 'running'
+      } else if (currentRun.status === 'running' || currentRun.status === 'awaiting_human') {
+        // Advance to next phase
+        if (currentPhaseIndex < phaseOrder.length - 1) {
+          nextPhase = phaseOrder[currentPhaseIndex + 1]
+          nextStatus = 'running'
+        } else {
+          nextStatus = 'done'
+        }
+      }
+
+      // Simulate LLM processing with realistic delays and potential human intervention
+      const shouldRequireHuman = Math.random() < 0.3 // 30% chance of requiring human intervention
+      if (nextStatus === 'running' && shouldRequireHuman && ['synthesis', 'prioritize', 'qa'].includes(nextPhase)) {
+        nextStatus = 'awaiting_human'
+        
+        // Create a manual task
+        await supabaseClient
+          .from('orchestrator_manual_tasks')
+          .insert({
+            run_id: runId,
+            phase: nextPhase,
+            task_type: 'review',
+            status: 'pending',
+            title: `Review ${nextPhase} phase results`,
+            description: `Please review the ${nextPhase} phase output and approve to continue.`,
+            assignee: 'operator'
+          })
+      }
+
       const { data: run, error } = await supabaseClient
         .from('orchestrator_runs')
         .update({
-          status: 'running',
+          status: nextStatus,
+          phase: nextPhase,
           updated_at: new Date().toISOString()
         })
         .eq('id', runId)
@@ -90,6 +140,9 @@ serve(async (req) => {
       if (error) {
         throw error
       }
+
+      // Log the advancement
+      console.log(`🚀 Run ${runId} advanced from ${currentRun.phase}:${currentRun.status} to ${nextPhase}:${nextStatus}`)
 
       return new Response(
         JSON.stringify({ success: true, run }),
@@ -127,9 +180,91 @@ serve(async (req) => {
       )
     }
 
+    if (method === 'POST' && path === '/process-runs') {
+      // Auto-process running runs (simulate LLM work)
+      const { data: runningRuns, error: fetchError } = await supabaseClient
+        .from('orchestrator_runs')
+        .select('*')
+        .eq('status', 'running')
+
+      if (fetchError) {
+        throw fetchError
+      }
+
+      const processedRuns = []
+      
+      for (const run of runningRuns) {
+        // Simulate processing time (runs that have been running for more than 30 seconds)
+        const runningTime = Date.now() - new Date(run.updated_at).getTime()
+        
+        if (runningTime > 30000) { // 30 seconds
+          const phaseOrder = ['intake', 'market', 'synthesis', 'deconstruct', 'prioritize', 'build', 'qa', 'deploy', 'measure', 'decision']
+          const currentPhaseIndex = phaseOrder.indexOf(run.phase)
+          
+          let nextPhase = run.phase
+          let nextStatus = 'running'
+          
+          // Advance to next phase
+          if (currentPhaseIndex < phaseOrder.length - 1) {
+            nextPhase = phaseOrder[currentPhaseIndex + 1]
+            
+            // 30% chance of requiring human intervention in key phases
+            const shouldRequireHuman = Math.random() < 0.3
+            if (shouldRequireHuman && ['synthesis', 'prioritize', 'qa'].includes(nextPhase)) {
+              nextStatus = 'awaiting_human'
+              
+              // Create a manual task
+              await supabaseClient
+                .from('orchestrator_manual_tasks')
+                .insert({
+                  run_id: run.id,
+                  phase: nextPhase,
+                  task_type: 'review',
+                  status: 'pending',
+                  title: `Review ${nextPhase} phase results`,
+                  description: `Please review the ${nextPhase} phase output and approve to continue.`,
+                  assignee: 'operator'
+                })
+            }
+          } else {
+            nextStatus = 'done'
+          }
+
+          // Update the run
+          const { data: updatedRun, error: updateError } = await supabaseClient
+            .from('orchestrator_runs')
+            .update({
+              status: nextStatus,
+              phase: nextPhase,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', run.id)
+            .select()
+            .single()
+
+          if (!updateError) {
+            processedRuns.push(updatedRun)
+            console.log(`🤖 Auto-advanced run ${run.id} from ${run.phase} to ${nextPhase} (${nextStatus})`)
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ processed: processedRuns.length, runs: processedRuns }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
+
     if (method === 'GET' && path === '/health') {
       return new Response(
-        JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
+        JSON.stringify({ 
+          status: 'healthy', 
+          timestamp: new Date().toISOString(),
+          path: '/orchestrator-api/health'
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
