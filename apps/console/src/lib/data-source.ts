@@ -149,7 +149,7 @@ function transformSupabaseRuns(runs: unknown[]): RunRecord[] {
       updatedAt: run.updated_at as string,
       brief: run.brief as RunRecord['brief'],
       blockers: (run.blockers || [])
-        .filter((task: any) => task.status === 'open') // Only include open tasks // eslint-disable-line @typescript-eslint/no-explicit-any
+        .filter((task: any) => task.status === 'open') // eslint-disable-line @typescript-eslint/no-explicit-any -- Only include open tasks
         .map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
           id: task.id,
           runId: task.run_id,
