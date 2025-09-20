@@ -472,7 +472,7 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
         console.log('🎨 ArtifactsTab: Raw DB artifacts:', dbArtifacts);
         console.log('🎨 ArtifactsTab: Run ID:', run.id);
 
-        const realArtifacts = (dbArtifacts || []).map(artifact => ({
+        const realArtifacts = (dbArtifacts || []).map((artifact: any) => ({
           id: artifact.id,
           name: artifact.meta?.filename || `${artifact.kind}.${artifact.meta?.contentType?.includes('json') ? 'json' : 'md'}`,
           phase: artifact.phase,
