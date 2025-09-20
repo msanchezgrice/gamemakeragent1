@@ -210,6 +210,7 @@ async function generateDecisionArtifacts(supabaseClient: any, runId: string, bri
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 }
 
 serve(async (req) => {
@@ -329,13 +330,13 @@ serve(async (req) => {
         await supabaseClient
           .from('orchestrator_manual_tasks')
           .insert({
-            run_id: runId,
-            phase: nextPhase,
-            task_type: 'review',
-            status: 'pending',
-            title: `Review ${nextPhase} phase results`,
-            description: `Please review the ${nextPhase} phase output and approve to continue.`,
-            assignee: 'operator'
+                  run_id: runId,
+                  phase: nextPhase,
+                  task_type: 'portfolio_approval',
+                  status: 'open',
+                  title: `Review ${nextPhase} phase results`,
+                  description: `Please review the ${nextPhase} phase output and approve to continue.`,
+                  assignee: 'operator'
           })
       }
 
@@ -432,19 +433,45 @@ serve(async (req) => {
     }
 
     if (method === 'POST' && path === '/process-runs') {
-      // Auto-process running runs (simulate LLM work)
-      const { data: runningRuns, error: fetchError } = await supabaseClient
+      // Auto-process queued and running runs
+      const { data: queuedRuns, error: queuedError } = await supabaseClient
+        .from('orchestrator_runs')
+        .select('*')
+        .eq('status', 'queued')
+
+      const { data: runningRuns, error: runningError } = await supabaseClient
         .from('orchestrator_runs')
         .select('*')
         .eq('status', 'running')
 
-      if (fetchError) {
-        throw fetchError
+      if (queuedError || runningError) {
+        throw queuedError || runningError
       }
 
       const processedRuns = []
       
-      for (const run of runningRuns) {
+      // Start queued runs immediately
+      for (const run of queuedRuns || []) {
+        console.log(`🚀 Starting queued run ${run.id}`)
+        
+        const { data: updatedRun, error: updateError } = await supabaseClient
+          .from('orchestrator_runs')
+          .update({
+            status: 'running',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', run.id)
+          .select()
+          .single()
+
+        if (!updateError) {
+          processedRuns.push(updatedRun)
+          console.log(`✅ Started run ${run.id} - now running in ${run.phase} phase`)
+        }
+      }
+      
+      // Process running runs
+      for (const run of runningRuns || []) {
         // Simulate processing time (runs that have been running for more than 30 seconds)
         const runningTime = Date.now() - new Date(run.updated_at).getTime()
         
@@ -468,13 +495,13 @@ serve(async (req) => {
               await supabaseClient
                 .from('orchestrator_manual_tasks')
                 .insert({
-                  run_id: run.id,
-                  phase: nextPhase,
-                  task_type: 'review',
-                  status: 'pending',
-                  title: `Review ${nextPhase} phase results`,
-                  description: `Please review the ${nextPhase} phase output and approve to continue.`,
-                  assignee: 'operator'
+                    run_id: run.id,
+                    phase: nextPhase,
+                    task_type: 'portfolio_approval',
+                    status: 'open',
+                    title: `Review ${nextPhase} phase results`,
+                    description: `Please review the ${nextPhase} phase output and approve to continue.`,
+                    assignee: 'operator'
                 })
             }
           } else {

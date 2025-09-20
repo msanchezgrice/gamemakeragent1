@@ -15,7 +15,28 @@ export default function DashboardPage() {
     console.log('🏠 Dashboard: Loading runs...');
     setLoading(true);
     try {
-        const fetchedRuns = await loadRuns();
+      // Trigger auto-processing first
+      try {
+        console.log('🤖 Dashboard: Triggering auto-processing...');
+        const processResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/process-runs`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (processResponse.ok) {
+          const result = await processResponse.json();
+          console.log('✅ Dashboard: Auto-processing result:', result);
+        } else {
+          console.warn('⚠️ Dashboard: Auto-processing failed:', processResponse.status);
+        }
+      } catch (processError) {
+        console.warn('⚠️ Dashboard: Auto-processing error:', processError);
+      }
+
+      const fetchedRuns = await loadRuns();
       console.log('🏠 Dashboard: Loaded runs count:', fetchedRuns.length);
       console.log('🏠 Dashboard: Run themes:', fetchedRuns.map(r => r.brief.theme));
       console.log('🏠 Dashboard: Setting runs state with:', fetchedRuns);

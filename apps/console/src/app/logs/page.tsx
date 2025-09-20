@@ -67,73 +67,11 @@ export default function LogsPage() {
         }));
       }
       
-      // Add some additional mock logs for variety
-      const additionalLogs: LogEntry[] = [
-        {
-          id: '1',
-          timestamp: new Date(Date.now() - 30000).toISOString(),
-          level: 'info',
-          service: 'orchestrator',
-          message: 'Run f89dcdd6-d483-435a-ac2a-1ddf69929a09 created successfully',
-          runId: 'f89dcdd6-d483-435a-ac2a-1ddf69929a09',
-          phase: 'intake'
-        },
-        {
-          id: '2',
-          timestamp: new Date(Date.now() - 25000).toISOString(),
-          level: 'info',
-          service: 'theme-agent',
-          message: 'Processing theme analysis for "ninja fitness challenge"',
-          runId: 'f89dcdd6-d483-435a-ac2a-1ddf69929a09',
-          phase: 'intake',
-          metadata: { theme: 'ninja fitness challenge', industry: 'fitness' }
-        },
-        {
-          id: '3',
-          timestamp: new Date(Date.now() - 20000).toISOString(),
-          level: 'success',
-          service: 'market-agent',
-          message: 'Market scan completed: found 47 similar games',
-          runId: '8417439c-ee1f-4576-814e-4690691bda4f',
-          phase: 'market',
-          metadata: { similarGames: 47, topGenres: ['fitness', 'gamification'] }
-        },
-        {
-          id: '4',
-          timestamp: new Date(Date.now() - 15000).toISOString(),
-          level: 'warning',
-          service: 'synthesis-agent',
-          message: 'Low confidence in trend analysis (0.67), requesting human review',
-          runId: '0a18f195-7851-487d-9363-a020ea07b835',
-          phase: 'synthesis'
-        },
-        {
-          id: '5',
-          timestamp: new Date(Date.now() - 10000).toISOString(),
-          level: 'info',
-          service: 'orchestrator',
-          message: 'Run 0a18f195-7851-487d-9363-a020ea07b835 advanced to synthesis phase',
-          runId: '0a18f195-7851-487d-9363-a020ea07b835',
-          phase: 'synthesis'
-        },
-        {
-          id: '6',
-          timestamp: new Date(Date.now() - 5000).toISOString(),
-          level: 'error',
-          service: 'build-agent',
-          message: 'Failed to generate prototype: API rate limit exceeded',
-          runId: '2c7c640b-d81b-43d7-a172-160f7a850e3b',
-          phase: 'build',
-          metadata: { error: 'RATE_LIMIT', retryAfter: 60 }
-        }
-      ];
 
-      // Combine real logs with additional logs and sort by timestamp
-      const allLogs = [...realLogs, ...additionalLogs].sort((a, b) => 
+      // Use only real logs from runs
+      setLogs(realLogs.sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      
-      setLogs(allLogs);
+      ));
     } catch (error) {
       console.error('❌ Logs: Failed to fetch logs:', error);
     } finally {
