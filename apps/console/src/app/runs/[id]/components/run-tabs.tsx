@@ -91,24 +91,9 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
   );
 }
 
-function SummaryTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => void }) {
-  const [isAdvancing, setIsAdvancing] = useState(false);
+function SummaryTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
   const isAwaitingHuman = run.status === 'awaiting_human';
   const isRunning = run.status === 'running';
-  
-  const handleAdvanceRun = async () => {
-    console.log('🚀 SummaryTab: Advancing run:', run.id);
-    setIsAdvancing(true);
-    try {
-      await advanceRun(run.id);
-      console.log('✅ SummaryTab: Run advanced successfully');
-      onRunUpdate?.();
-    } catch (error) {
-      console.error('❌ SummaryTab: Failed to advance run:', error);
-    } finally {
-      setIsAdvancing(false);
-    }
-  };
   
   return (
     <div className="space-y-6">
