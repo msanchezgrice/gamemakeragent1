@@ -245,7 +245,7 @@ interface ArtifactData {
   meta?: {
     filename?: string;
     size?: number;
-    data?: unknown;
+    data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     contentType?: string;
   };
 }
@@ -370,7 +370,8 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
                     {artifact.phase}
                   </span>
                 </div>
-                {artifact.meta?.data && (typeof artifact.meta.data === 'string' || typeof artifact.meta.data === 'object') && (
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {artifact.meta?.data && (
                   <details className="mt-3">
                     <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
                       Show content
