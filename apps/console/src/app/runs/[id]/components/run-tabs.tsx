@@ -247,7 +247,15 @@ function getEstimatedCompletion(phase: string): string {
 
 function ArtifactsTab({ run }: { run: RunRecord }) {
   const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
-  const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [artifacts, setArtifacts] = useState<Array<{
+    id: string;
+    name: string;
+    phase: string;
+    size: string;
+    createdAt: string;
+    type: string;
+    content: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -320,7 +328,7 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
     }
 
     fetchArtifacts();
-  }, [run.id]);
+  }, [run.id, run.brief.targetAudience, run.brief.theme, run.createdAt]);
 
   if (loading) {
     return (
