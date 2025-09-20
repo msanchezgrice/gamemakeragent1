@@ -30,6 +30,7 @@ interface RunTabsProps {
   };
   onRunUpdate?: () => void;
   initialTab?: TabKey;
+  selectedStage?: string;
 }
 
 type TabKey = 'summary' | 'stage' | 'artifacts' | 'activity' | 'tasks' | 'controls';
@@ -47,7 +48,7 @@ const TABS: Array<{
   { key: 'controls', label: 'Controls', icon: Settings },
 ];
 
-export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsProps) {
+export function RunTabs({ run, onRunUpdate, initialTab = 'summary', selectedStage }: RunTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   return (
@@ -86,7 +87,7 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
           transition={{ duration: 0.3 }}
         >
                 {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} setActiveTab={setActiveTab} />}
-                {activeTab === 'stage' && <StageTab run={run} onRunUpdate={onRunUpdate} />}
+                {activeTab === 'stage' && <StageTab run={run} onRunUpdate={onRunUpdate} selectedStage={selectedStage} />}
                 {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
                 {activeTab === 'activity' && <ActivityTab run={run} />}
                 {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
@@ -258,23 +259,92 @@ interface LogData {
   agent: string;
 }
 
-function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
+function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => void; selectedStage?: string }) {
+  // Use selectedStage if provided, otherwise default to current run phase
+  const displayStage = selectedStage || run.phase;
+  const currentPhaseIndex = PHASES.findIndex(p => p.key === run.phase);
+  const displayStageIndex = PHASES.findIndex(p => p.key === displayStage);
+  const isCurrentStage = displayStage === run.phase;
+  const isFutureStage = displayStageIndex > currentPhaseIndex;
+  const isPastStage = displayStageIndex < currentPhaseIndex;
+
   const [stageData, setStageData] = useState<{
     artifacts: ArtifactData[];
     inputs: ArtifactData[];
     decisions: LogData[];
     context: LogData[];
+    requirements: string[];
+    missing: string[];
   }>({
     artifacts: [],
     inputs: [],
     decisions: [],
-    context: []
+    context: [],
+    requirements: [],
+    missing: []
   });
   const [loading, setLoading] = useState(true);
 
+  // Get stage-specific requirements and descriptions
+  const getStageInfo = (stage: string) => {
+    const stageConfigs = {
+      intake: {
+        requirements: ['Complete brief submission', 'Define constraints and goals'],
+        outputs: ['Processed brief', 'Validation results', 'Project parameters'],
+        description: 'Initial brief processing and constraint validation'
+      },
+      market: {
+        requirements: ['Validated brief from Intake'],
+        outputs: ['Market scan report', 'Competitor analysis', 'Trend identification'],
+        description: 'Market research and competitive landscape analysis'
+      },
+      synthesis: {
+        requirements: ['Market research data', 'Competitor insights'],
+        outputs: ['Theme analysis', 'Market insights report', 'Opportunity identification'],
+        description: 'Synthesis of market data into actionable insights'
+      },
+      deconstruct: {
+        requirements: ['Market insights', 'Theme analysis'],
+        outputs: ['Game mechanics breakdown', 'Success patterns', 'Feature analysis'],
+        description: 'Analysis of successful games and pattern identification'
+      },
+      prioritize: {
+        requirements: ['Deconstructed patterns', 'Market insights'],
+        outputs: ['Prioritized feature list', 'Development roadmap', 'Resource allocation'],
+        description: 'Opportunity ranking and feature prioritization'
+      },
+      build: {
+        requirements: ['Prioritized features', 'Development roadmap'],
+        outputs: ['Game prototypes', 'Build briefs', 'Asset generation'],
+        description: 'Game prototype generation and asset creation'
+      },
+      qa: {
+        requirements: ['Built prototypes', 'Game assets'],
+        outputs: ['Test reports', 'Quality metrics', 'Bug fixes'],
+        description: 'Quality assurance testing and validation'
+      },
+      deploy: {
+        requirements: ['QA-approved builds', 'Test reports'],
+        outputs: ['Deployment packages', 'Store listings', 'Distribution setup'],
+        description: 'Platform upload and distribution preparation'
+      },
+      measure: {
+        requirements: ['Deployed games', 'Live distribution'],
+        outputs: ['Performance reports', 'User metrics', 'Analytics data'],
+        description: 'Performance tracking and user feedback collection'
+      },
+      decision: {
+        requirements: ['Performance data', 'User metrics'],
+        outputs: ['Recommendations', 'Iteration plans', 'Next steps'],
+        description: 'Results analysis and next iteration planning'
+      }
+    };
+    return stageConfigs[stage as keyof typeof stageConfigs] || stageConfigs.intake;
+  };
+
   useEffect(() => {
     const fetchStageData = async () => {
-      console.log(`🎭 StageTab: Fetching stage data for ${run.phase} phase of run ${run.id}`);
+      console.log(`🎭 StageTab: Fetching stage data for ${displayStage} phase of run ${run.id}`);
       try {
         // Fetch artifacts via Edge Function API
         const artifactsResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/artifacts`, {
@@ -302,18 +372,37 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
           console.error('❌ StageTab: Failed to fetch logs:', logsError);
         }
 
-        // Organize data by relevance to current stage
-        const currentPhaseArtifacts = artifacts?.filter((a: ArtifactData) => a.phase === run.phase) || [];
-        const previousPhaseArtifacts = artifacts?.filter((a: ArtifactData) => a.phase !== run.phase) || [];
+        // Get stage info for the display stage
+        const stageInfo = getStageInfo(displayStage);
+        
+        // Organize data by relevance to selected stage
+        const stageArtifacts = artifacts?.filter((a: ArtifactData) => a.phase === displayStage) || [];
+        const inputArtifacts = artifacts?.filter((a: ArtifactData) => a.phase !== displayStage) || [];
+        const stageContext = logs?.filter(l => l.phase === displayStage && l.thinking_trace) || [];
+        
+        // Determine missing requirements for future stages
+        const missingRequirements: string[] = [];
+        if (isFutureStage) {
+          // Check what's needed to unlock this stage
+          const requiredPhases = PHASES.slice(0, displayStageIndex);
+          requiredPhases.forEach(phase => {
+            const phaseArtifacts = artifacts?.filter(a => a.phase === phase.key) || [];
+            if (phaseArtifacts.length === 0) {
+              missingRequirements.push(`Complete ${phase.label} phase`);
+            }
+          });
+        }
         
         setStageData({
-          artifacts: currentPhaseArtifacts,
-          inputs: previousPhaseArtifacts,
-          decisions: logs?.filter(l => l.level === 'info' && l.message.includes('completed')) || [],
-          context: logs?.filter(l => l.thinking_trace) || []
+          artifacts: stageArtifacts,
+          inputs: inputArtifacts,
+          decisions: logs?.filter(l => l.level === 'info' && l.message.includes('completed') && l.phase === displayStage) || [],
+          context: stageContext,
+          requirements: stageInfo.requirements,
+          missing: missingRequirements
         });
 
-        console.log(`✅ StageTab: Loaded stage data - ${currentPhaseArtifacts.length} current artifacts, ${previousPhaseArtifacts.length} inputs, ${logs?.length || 0} logs`);
+        console.log(`✅ StageTab: Loaded stage data for ${displayStage} - ${stageArtifacts.length} stage artifacts, ${inputArtifacts.length} inputs, ${logs?.length || 0} logs`);
       } catch (error) {
         console.error('❌ StageTab: Error fetching stage data:', error);
       } finally {
@@ -322,12 +411,15 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
     };
 
     fetchStageData();
-  }, [run.id, run.phase]);
+  }, [run.id, run.phase, displayStage, displayStageIndex, isFutureStage]);
+
+  const stageInfo = getStageInfo(displayStage);
+  const displayStagePhase = PHASES.find(p => p.key === displayStage);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">{run.phase.charAt(0).toUpperCase() + run.phase.slice(1)} Stage</h3>
+        <h3 className="text-lg font-semibold text-white">{displayStagePhase?.label || displayStage} Stage</h3>
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
           <p className="text-slate-400">Loading stage content...</p>
@@ -339,20 +431,80 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">
-          {run.phase.charAt(0).toUpperCase() + run.phase.slice(1)} Stage
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            {displayStagePhase?.icon && <displayStagePhase.icon className="h-5 w-5" />}
+            {displayStagePhase?.label || displayStage} Stage
+            {isFutureStage && (
+              <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">
+                Future
+              </span>
+            )}
+            {isPastStage && (
+              <span className="text-xs px-2 py-1 bg-green-600/20 text-green-400 rounded-full">
+                Completed
+              </span>
+            )}
+            {isCurrentStage && (
+              <span className="text-xs px-2 py-1 bg-warning/20 text-warning rounded-full">
+                Current
+              </span>
+            )}
+          </h3>
+          <p className="text-sm text-slate-400 mt-1">{stageInfo.description}</p>
+        </div>
         <span className="text-sm text-slate-400">
-          Phase {PHASES.findIndex(p => p.key === run.phase) + 1} of {PHASES.length}
+          Phase {displayStageIndex + 1} of {PHASES.length}
         </span>
       </div>
 
-      {/* Current Phase Outputs */}
+      {/* Missing Requirements for Future Stages */}
+      {isFutureStage && stageData.missing.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium text-white flex items-center gap-2">
+            <Clock className="h-4 w-4 text-red-400" />
+            Missing Requirements ({stageData.missing.length})
+          </h4>
+          <div className="p-4 rounded-2xl border border-red-400/30 bg-red-400/5">
+            <p className="text-sm text-slate-300 mb-3">
+              This stage is locked. Complete the following requirements to unlock:
+            </p>
+            <ul className="space-y-2">
+              {stageData.missing.map((requirement, index) => (
+                <li key={index} className="flex items-center gap-2 text-sm text-red-300">
+                  <div className="h-2 w-2 bg-red-400 rounded-full" />
+                  {requirement}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Stage Requirements */}
+      {stageData.requirements.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-md font-medium text-white flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 text-blue-400" />
+            Stage Requirements ({stageData.requirements.length})
+          </h4>
+          <div className="grid gap-2">
+            {stageData.requirements.map((requirement, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 rounded-lg border border-blue-400/30 bg-blue-400/5">
+                <CheckCircle className="h-4 w-4 text-blue-400" />
+                <span className="text-sm text-slate-300">{requirement}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Stage Outputs */}
       {stageData.artifacts.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-md font-medium text-white flex items-center gap-2">
             <Download className="h-4 w-4 text-primary" />
-            Current Phase Outputs ({stageData.artifacts.length})
+            {displayStagePhase?.label || displayStage} Outputs ({stageData.artifacts.length})
           </h4>
           <div className="grid gap-3">
             {stageData.artifacts.map((artifact) => (
@@ -389,12 +541,12 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
         </div>
       )}
 
-      {/* Previous Phase Inputs */}
+      {/* Related Artifacts from Other Phases */}
       {stageData.inputs.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-md font-medium text-white flex items-center gap-2">
             <Layers className="h-4 w-4 text-blue-400" />
-            Previous Phase Inputs ({stageData.inputs.length})
+            Related Artifacts ({stageData.inputs.length})
           </h4>
           <div className="grid gap-3">
             {stageData.inputs.map((input) => (
@@ -451,12 +603,26 @@ function StageTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
       )}
 
       {/* Empty State */}
-      {stageData.artifacts.length === 0 && stageData.inputs.length === 0 && stageData.context.length === 0 && (
+      {stageData.artifacts.length === 0 && stageData.inputs.length === 0 && stageData.context.length === 0 && !isFutureStage && (
         <div className="text-center py-12">
           <Layers className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-slate-400 mb-2">No Stage Content Yet</h4>
+          <h4 className="text-lg font-medium text-slate-400 mb-2">No Content Available</h4>
           <p className="text-slate-500">
-            Content will appear here as the {run.phase} phase progresses.
+            {isPastStage 
+              ? `No artifacts were generated during the ${displayStagePhase?.label || displayStage} phase.`
+              : `Content will appear here as the ${displayStagePhase?.label || displayStage} phase progresses.`
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Future Stage Empty State */}
+      {isFutureStage && stageData.missing.length === 0 && (
+        <div className="text-center py-12">
+          <Clock className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <h4 className="text-lg font-medium text-slate-400 mb-2">Future Stage</h4>
+          <p className="text-slate-500">
+            The {displayStagePhase?.label || displayStage} phase will become available once previous phases are completed.
           </p>
         </div>
       )}

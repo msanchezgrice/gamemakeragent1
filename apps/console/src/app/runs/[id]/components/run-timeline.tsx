@@ -25,6 +25,8 @@ interface RunTimelineProps {
       likability?: number;
     };
   };
+  selectedStage?: RunPhase;
+  onStageSelect?: (stage: RunPhase) => void;
 }
 
 export const PHASES: Array<{
@@ -45,7 +47,7 @@ export const PHASES: Array<{
   { key: 'decision', label: 'Decision', description: 'Evaluate and decide next steps', icon: CheckCircle },
 ];
 
-export function RunTimeline({ run }: RunTimelineProps) {
+export function RunTimeline({ run, selectedStage, onStageSelect }: RunTimelineProps) {
   const currentPhaseIndex = PHASES.findIndex(p => p.key === run.phase);
   
   // If run is awaiting human review, we've completed the current phase work
@@ -72,7 +74,12 @@ export function RunTimeline({ run }: RunTimelineProps) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1, duration: 0.3 }}
-              className="relative flex items-center gap-4"
+              className={cn(
+                "relative flex items-center gap-4 cursor-pointer rounded-lg p-2 -m-2 transition-colors",
+                selectedStage === phase.key && "bg-primary/10 border border-primary/30",
+                "hover:bg-slate-800/50"
+              )}
+              onClick={() => onStageSelect?.(phase.key)}
             >
               {/* Timeline connector */}
               {index < PHASES.length - 1 && (

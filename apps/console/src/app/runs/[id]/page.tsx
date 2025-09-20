@@ -18,6 +18,7 @@ export default function RunDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<string | undefined>(undefined);
 
   const fetchRun = useCallback(async () => {
       console.log('🔍 RunDetailPage: Loading run with ID:', runId);
@@ -207,10 +208,18 @@ export default function RunDetailPage() {
 
       <div className="grid gap-8 lg:grid-cols-[350px,1fr]">
         <div>
-          <RunTimeline run={run} />
+          <RunTimeline 
+            run={run} 
+            selectedStage={selectedStage as any}
+            onStageSelect={setSelectedStage}
+          />
         </div>
         <div>
-          <RunTabs run={run} onRunUpdate={refreshRun} />
+          <RunTabs 
+            run={run} 
+            onRunUpdate={refreshRun}
+            selectedStage={selectedStage}
+          />
         </div>
       </div>
     </main>
