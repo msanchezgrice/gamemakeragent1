@@ -75,16 +75,19 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 API Key status: ${apiKey ? 'Present' : 'Missing'}, Length: ${apiKey?.length || 0}`);
+    
     // Make actual LLM API call (using fetch to Claude API)
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || '',
+        'x-api-key': apiKey || '',
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -94,7 +97,9 @@ Return ONLY valid JSON with this structure:
     });
 
     if (!response.ok) {
-      throw new Error(`LLM API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
     }
 
     const llmResult = await response.json();
@@ -131,13 +136,27 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(marketData).length,
           contentType: 'application/json',
           data: marketData,
-          llm_model: 'claude-3-sonnet-20240229',
+          llm_model: 'claude-3-5-sonnet-20241022',
           generated_at: new Date().toISOString()
         }
       });
 
   } catch (error) {
     console.error(`❌ LLM call failed for market research:`, error);
+    
+    // Store error in logs
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'market',
+        agent: 'market-research-agent',
+        level: 'error',
+        message: `Market research failed: ${error.message}`,
+        thinking_trace: marketPrompt,
+        llm_response: null,
+        created_at: new Date().toISOString()
+      });
     
     // Fallback to structured placeholder if LLM fails
     const fallbackData = {
