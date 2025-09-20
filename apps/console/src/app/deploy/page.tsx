@@ -33,29 +33,23 @@ export default function DeployPage() {
     );
   }
 
+  // Only show runs that have actually reached deployment phase
   const deployRuns = runs.filter((run) => 
-    run.phase === 'deploy' || run.phase === 'measure' || run.status === 'done'
+    (run.phase === 'deploy' || run.phase === 'measure' || run.status === 'done') &&
+    run.status !== 'queued' // Don't show queued runs
   );
   
-  // Real deployment data from runs
-  const deployments = deployRuns.map((run) => ({
+  // Only show real deployment data for games that have completed build and QA
+  const deployments = deployRuns.length > 0 ? deployRuns.map((run) => ({
     ...run,
     deploymentStatus: (run.status === 'done' ? 'live' : 
                      run.phase === 'measure' ? 'uploading' : 'to_upload') as 'to_upload' | 'uploading' | 'live',
-    gameVariants: [
-      {
-        id: `${run.id}-portrait`,
-        orientation: 'portrait' as 'portrait' | 'landscape',
-        buildSize: Math.floor(Math.random() * 1000 + 500),
-        thumbnailUrl: '/api/placeholder/200/300',
-        uploadProgress: run.status === 'done' ? 100 : Math.floor(Math.random() * 80 + 10)
-      }
-    ],
+    gameVariants: [], // Will be populated when actual games are built
     metadata: {
-      clipcadeId: run.status === 'done' ? `CG${Math.random().toString(36).substr(2, 6).toUpperCase()}` : null,
-      uploadedAt: run.status === 'done' ? run.updatedAt : null
+      clipcadeId: null, // Will be populated when actually deployed
+      uploadedAt: null
     }
-  }));
+  })) : [];
 
   return (
     <main className="mx-auto max-w-7xl px-8 py-12">

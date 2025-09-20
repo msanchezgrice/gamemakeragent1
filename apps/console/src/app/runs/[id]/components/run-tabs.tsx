@@ -27,6 +27,7 @@ interface RunTabsProps {
     };
   };
   onRunUpdate?: () => void;
+  initialTab?: TabKey;
 }
 
 type TabKey = 'summary' | 'artifacts' | 'activity' | 'tasks';
@@ -42,16 +43,17 @@ const TABS: Array<{
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
-export function RunTabs({ run, onRunUpdate }: RunTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('summary');
+export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   return (
-    <div className="rounded-3xl border border-slate-800/70 bg-surface/70 backdrop-blur">
+    <div className="rounded-3xl border border-slate-800/70 bg-surface/70 backdrop-blur" data-tabs-container>
       {/* Tab Navigation */}
       <div className="flex border-b border-slate-800/50">
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            data-tab={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
               "flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors relative",
@@ -124,13 +126,21 @@ function SummaryTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => 
             <h4 className="font-medium text-warning">Human Approval Required</h4>
             <p className="text-sm text-slate-300">This run is paused pending manual review</p>
           </div>
-          <button 
-            onClick={handleAdvanceRun}
-            disabled={isAdvancing}
-            className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors disabled:opacity-50"
-          >
-            {isAdvancing ? 'Advancing...' : 'Review Now'}
-          </button>
+              <button
+                onClick={() => {
+                  // Switch to artifacts tab for review
+                  const tabsContainer = document.querySelector('[data-tabs-container]');
+                  if (tabsContainer) {
+                    const artifactsTab = tabsContainer.querySelector('[data-tab="artifacts"]') as HTMLButtonElement;
+                    if (artifactsTab) {
+                      artifactsTab.click();
+                    }
+                  }
+                }}
+                className="ml-auto px-4 py-2 bg-warning text-black rounded-lg font-medium hover:bg-warning/90 transition-colors"
+              >
+                Review Artifacts
+              </button>
         </motion.div>
       )}
       
@@ -374,54 +384,36 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
 }
 
 function ActivityTab({ run }: { run: RunRecord }) {
-  // Enhanced activity with agent thinking traces
+  // Real activity based on run status and phase changes
   const activities = [
-    { 
-      id: '1', 
-      type: 'agent_thinking', 
-      agent: 'deconstruct-agent',
-      message: `Analyzing successful ${run.brief.industry} games for ${run.brief.theme} patterns`, 
-      timestamp: new Date(Date.now() - 60000).toISOString(),
-      thinking: `Examining top-performing games in ${run.brief.industry} space. Key patterns identified: 1) Progressive difficulty scaling, 2) Clear visual feedback, 3) Immediate reward loops. Focusing on ${run.brief.theme} theme integration.`,
-      status: 'in_progress'
-    },
-    { 
-      id: '2', 
-      type: 'phase_change', 
-      message: `Advanced to ${run.phase} phase`, 
-      timestamp: run.updatedAt,
-      details: `Completed previous phase work, now processing ${run.phase} requirements`
-    },
-    { 
-      id: '3', 
-      type: 'artifact_generated', 
-      message: 'Generated market analysis artifact', 
-      timestamp: new Date(Date.now() - 300000).toISOString(),
-      details: 'Market scan completed with 85% confidence. Found 3 direct competitors and identified market gap.'
-    },
-    { 
-      id: '4', 
-      type: 'agent_thinking', 
-      agent: 'synthesis-agent',
-      message: `Synthesizing insights for ${run.brief.theme} concept`, 
-      timestamp: new Date(Date.now() - 600000).toISOString(),
-      thinking: `Combining market data with theme requirements. ${run.brief.theme} shows strong potential in ${run.brief.industry} vertical. Confidence level: 0.85. Recommending focus on ${run.brief.targetAudience} demographic.`,
-      status: 'completed'
-    },
-    { 
-      id: '5', 
-      type: 'task_created', 
-      message: 'Created manual approval task', 
-      timestamp: run.createdAt,
-      details: 'Human review required for market analysis results'
-    },
-    { 
-      id: '6', 
-      type: 'run_created', 
-      message: 'Run initialized', 
+    {
+      id: 'run_created',
+      type: 'run_created',
+      message: 'Run initialized',
       timestamp: run.createdAt,
       details: `Started ${run.brief.theme} development pipeline`
     },
+    ...(run.status === 'running' ? [{
+      id: 'phase_active',
+      type: 'phase_change',
+      message: `Currently processing ${run.phase} phase`,
+      timestamp: run.updatedAt,
+      details: `Agents are working on ${run.phase} requirements`
+    }] : []),
+    ...(run.status === 'awaiting_human' ? [{
+      id: 'awaiting_review',
+      type: 'task_created',
+      message: 'Human review required',
+      timestamp: run.updatedAt,
+      details: `Run paused in ${run.phase} phase pending manual approval`
+    }] : []),
+    ...(run.status === 'done' ? [{
+      id: 'run_completed',
+      type: 'run_completed',
+      message: 'Run completed successfully',
+      timestamp: run.updatedAt,
+      details: 'All phases completed, game ready for deployment'
+    }] : [])
   ];
 
   return (

@@ -34,20 +34,24 @@ export default function QADashboard() {
     );
   }
 
-  const qaRuns = runs.filter((run) => run.phase === 'qa' || run.status === 'awaiting_human');
+  // Only show runs that are actually in QA phase and have completed build
+  const qaRuns = runs.filter((run) => 
+    run.phase === 'qa' && 
+    (run.status === 'running' || run.status === 'awaiting_human')
+  );
   
-  // Real QA data from runs
-  const qaData = qaRuns.map((run) => ({
+  // Only show real QA data if we have actual games to test
+  const qaData = qaRuns.length > 0 ? qaRuns.map((run) => ({
     ...run,
     qaMetrics: {
-      ttfi: Math.random() * 3000 + 500, // Time to first interaction (ms)
-      fps: Math.random() * 20 + 40, // FPS
-      errorCount: Math.floor(Math.random() * 5),
-      loadTime: Math.random() * 2000 + 1000,
-      memoryUsage: Math.random() * 50 + 20, // MB
-      crashRate: Math.random() * 0.05, // 0-5%
+      ttfi: 0, // Will be populated when actual testing occurs
+      fps: 0,
+      errorCount: 0,
+      loadTime: 0,
+      memoryUsage: 0,
+      crashRate: 0,
     }
-  }));
+  })) : [];
 
   return (
     <main className="mx-auto max-w-7xl px-8 py-12">
