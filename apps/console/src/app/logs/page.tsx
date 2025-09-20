@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Filter
 } from 'lucide-react';
-import { mcp_supabase_get_logs } from '../../lib/supabase-mcp';
+// Note: In a real implementation, we would fetch logs from Supabase or other logging service
 
 interface LogEntry {
   id: string;
@@ -34,8 +34,7 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     console.log('📋 Logs: Fetching system logs...');
     try {
-      // Get Edge Function logs
-      const edgeLogs = await fetch('/api/logs/edge-functions');
+      // In a real implementation, we would fetch logs from Supabase Edge Function logs API
       
       // For now, create some mock realistic logs based on our runs
       const mockLogs: LogEntry[] = [
