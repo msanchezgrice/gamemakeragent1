@@ -435,37 +435,28 @@ function ActivityTab({ run }: { run: RunRecord }) {
             }`}
           >
             <div className="flex items-start gap-3">
-              <div className={`h-3 w-3 rounded-full mt-1 ${
-                activity.type === 'agent_thinking' 
-                  ? activity.status === 'in_progress' 
-                    ? 'bg-primary animate-pulse' 
-                    : 'bg-primary'
-                  : activity.type === 'artifact_generated'
-                  ? 'bg-success'
-                  : 'bg-slate-400'
-              }`} />
+                  <div className={`h-3 w-3 rounded-full mt-1 ${
+                    activity.type === 'run_created'
+                      ? 'bg-primary'
+                      : activity.type === 'phase_change'
+                      ? 'bg-blue-400'
+                      : activity.type === 'task_created'
+                      ? 'bg-warning'
+                      : activity.type === 'run_completed'
+                      ? 'bg-success'
+                      : 'bg-slate-400'
+                  }`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-medium text-white">{activity.message}</p>
-                  {activity.agent && (
-                    <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">
-                      {activity.agent}
-                    </span>
-                  )}
-                  {activity.status === 'in_progress' && (
+                  {run.status === 'running' && activity.type === 'phase_change' && (
                     <span className="text-xs px-2 py-1 bg-warning/20 text-warning rounded-full animate-pulse">
                       Active
                     </span>
                   )}
                 </div>
                 
-                {activity.thinking && (
-                  <div className="mt-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
-                    <p className="text-xs text-slate-300 leading-relaxed">{activity.thinking}</p>
-                  </div>
-                )}
-                
-                {activity.details && !activity.thinking && (
+                {activity.details && (
                   <p className="text-xs text-slate-400 mt-1">{activity.details}</p>
                 )}
                 
