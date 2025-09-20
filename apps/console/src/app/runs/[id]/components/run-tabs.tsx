@@ -282,8 +282,8 @@ function StageTab({ run, onRunUpdate }: { run: RunRecord; onRunUpdate?: () => vo
         }
 
         // Organize data by relevance to current stage
-        const currentPhaseArtifacts = artifacts?.filter(a => a.phase === run.phase) || [];
-        const previousPhaseArtifacts = artifacts?.filter(a => a.phase !== run.phase) || [];
+        const currentPhaseArtifacts = artifacts?.filter((a: any) => a.phase === run.phase) || [];
+        const previousPhaseArtifacts = artifacts?.filter((a: any) => a.phase !== run.phase) || [];
         
         setStageData({
           artifacts: currentPhaseArtifacts,
