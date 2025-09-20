@@ -13,7 +13,8 @@ import {
   Clock,
   User,
   CheckCircle,
-  Settings
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
@@ -362,8 +363,19 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
   );
 }
 
+interface Activity {
+  id: string;
+  type: string;
+  message: string;
+  timestamp: string;
+  details: string;
+  agent?: string;
+  phase?: string;
+  llm_response?: string | object;
+}
+
 function ActivityTab({ run }: { run: RunRecord }) {
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -384,7 +396,16 @@ function ActivityTab({ run }: { run: RunRecord }) {
         }
 
         // Convert logs to activity format
-        const logActivities = logs?.map((log: any) => ({
+        const logActivities = logs?.map((log: {
+          id: string;
+          created_at: string;
+          level: string;
+          message: string;
+          thinking_trace?: string;
+          agent: string;
+          phase: string;
+          llm_response?: string | object;
+        }) => ({
           id: log.id,
           type: log.level === 'error' ? 'error' : 'agent_activity',
           message: log.message,
@@ -450,12 +471,29 @@ function ActivityTab({ run }: { run: RunRecord }) {
     };
 
     fetchActivities();
-  }, [run.id, run.status, run.phase, run.updatedAt]);
+  }, [run.id, run.status, run.phase, run.updatedAt, run.brief.theme, run.createdAt]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">Activity Log</h3>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading activities...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-white">Activity Log</h3>
-      <div className="space-y-3">
+      {activities.length === 0 ? (
+        <div className="text-center py-8 text-slate-400">
+          No activities recorded yet.
+        </div>
+      ) : (
+        <div className="space-y-3">
         {activities.map((activity, index) => (
           <motion.div
             key={activity.id}
@@ -504,7 +542,8 @@ function ActivityTab({ run }: { run: RunRecord }) {
             </div>
           </motion.div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
