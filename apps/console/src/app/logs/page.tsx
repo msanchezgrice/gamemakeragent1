@@ -21,6 +21,7 @@ interface LogEntry {
   message: string;
   runId?: string;
   phase?: string;
+  projectName?: string;
   metadata?: Record<string, unknown>;
 }
 
