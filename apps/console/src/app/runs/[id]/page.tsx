@@ -152,34 +152,6 @@ export default function RunDetailPage() {
           </div>
         </div>
       </main>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-white mb-2">Delete Run</h3>
-            <p className="text-slate-300 mb-4">
-              Are you sure you want to delete "{run?.brief.theme}"? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={deleting}
-                className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteRun}
-                disabled={deleting}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     );
   }
 
@@ -203,6 +175,7 @@ export default function RunDetailPage() {
   console.log('✅ RunDetailPage: Rendering run:', run.brief.theme);
 
   return (
+    <>
     <main className="mx-auto max-w-7xl px-8 py-12">
       <header className="mb-8">
         <div className="flex items-center gap-3 text-sm text-slate-400 mb-4">
@@ -241,7 +214,35 @@ export default function RunDetailPage() {
         </div>
       </div>
     </main>
-  );
+
+    {/* Delete Confirmation Modal */}
+    {showDeleteModal && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md mx-4">
+          <h3 className="text-lg font-semibold text-white mb-2">Delete Run</h3>
+          <p className="text-slate-300 mb-4">
+            Are you sure you want to delete "{run?.brief.theme}"? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleting}
+              className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteRun}
+              disabled={deleting}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
 }
 
 function getStatusColor(status: string) {
