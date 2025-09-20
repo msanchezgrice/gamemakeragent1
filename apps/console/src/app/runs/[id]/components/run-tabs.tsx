@@ -83,7 +83,7 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-              {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} />}
+              {activeTab === 'summary' && <SummaryTab run={run} onRunUpdate={onRunUpdate} setActiveTab={setActiveTab} />}
               {activeTab === 'artifacts' && <ArtifactsTab run={run} />}
               {activeTab === 'activity' && <ActivityTab run={run} />}
               {activeTab === 'tasks' && <TasksTab run={run} onRunUpdate={onRunUpdate} />}
@@ -94,7 +94,7 @@ export function RunTabs({ run, onRunUpdate, initialTab = 'summary' }: RunTabsPro
   );
 }
 
-function SummaryTab({ run }: { run: RunRecord; onRunUpdate?: () => void }) {
+function SummaryTab({ run, setActiveTab }: { run: RunRecord; onRunUpdate?: () => void; setActiveTab?: (tab: TabKey) => void }) {
   const isAwaitingHuman = run.status === 'awaiting_human';
   const isRunning = run.status === 'running';
   
