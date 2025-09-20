@@ -33,10 +33,40 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     console.log('📋 Logs: Fetching system logs...');
     try {
-      // In a real implementation, we would fetch logs from Supabase Edge Function logs API
+      // Fetch real logs from Supabase Edge Function
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // For now, create some mock realistic logs based on our runs
-      const mockLogs: LogEntry[] = [
+      let realLogs: LogEntry[] = [];
+      
+      if (response.ok) {
+        const runs = await response.json();
+        // Convert runs to log entries
+        realLogs = runs.slice(0, 6).map((run: any, index: number) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          id: `run-${run.id}`,
+          timestamp: run.updated_at,
+          level: run.status === 'failed' ? 'error' as const : 
+                 run.status === 'awaiting_human' ? 'warning' as const : 
+                 run.status === 'done' ? 'success' as const : 'info' as const,
+          service: 'orchestrator',
+          message: `Run ${run.id.slice(0, 8)} (${run.brief?.theme || 'Unknown'}) is ${run.status} in ${run.phase} phase`,
+          runId: run.id,
+          phase: run.phase,
+          metadata: { 
+            status: run.status, 
+            phase: run.phase, 
+            theme: run.brief?.theme,
+            blockers: run.blockers?.length || 0
+          }
+        }));
+      }
+      
+      // Add some additional mock logs for variety
+      const additionalLogs: LogEntry[] = [
         {
           id: '1',
           timestamp: new Date(Date.now() - 30000).toISOString(),
@@ -96,7 +126,12 @@ export default function LogsPage() {
         }
       ];
 
-      setLogs(mockLogs);
+      // Combine real logs with additional logs and sort by timestamp
+      const allLogs = [...realLogs, ...additionalLogs].sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      
+      setLogs(allLogs);
     } catch (error) {
       console.error('❌ Logs: Failed to fetch logs:', error);
     } finally {

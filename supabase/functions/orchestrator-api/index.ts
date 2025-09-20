@@ -19,8 +19,12 @@ serve(async (req) => {
     )
 
     const url = new URL(req.url)
-    const path = url.pathname.replace('/functions/v1/orchestrator-api', '')
+    // The path comes as /orchestrator-api/... so we need to remove that prefix
+    const path = url.pathname.replace('/orchestrator-api', '') || '/'
     const method = req.method
+
+    // Log requests for monitoring
+    console.log(`${method} ${path}`)
 
     // Routes
     if (method === 'GET' && path === '/runs') {
@@ -273,6 +277,7 @@ serve(async (req) => {
     }
 
     // Route not found
+    console.log('❌ Route not found:', method, path)
     return new Response(
       JSON.stringify({ error: 'Route not found' }),
       { 
