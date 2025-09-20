@@ -386,7 +386,7 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
           // Check what's needed to unlock this stage
           const requiredPhases = PHASES.slice(0, displayStageIndex);
           requiredPhases.forEach(phase => {
-            const phaseArtifacts = artifacts?.filter(a => a.phase === phase.key) || [];
+            const phaseArtifacts = artifacts?.filter((a: ArtifactData) => a.phase === phase.key) || [];
             if (phaseArtifacts.length === 0) {
               missingRequirements.push(`Complete ${phase.label} phase`);
             }
