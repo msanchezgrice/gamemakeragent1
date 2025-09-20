@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
-import { advanceRun, completeTask } from '../../../../lib/data-source';
+import { completeTask } from '../../../../lib/data-source';
 
 interface RunTabsProps {
   run: RunRecord & {
