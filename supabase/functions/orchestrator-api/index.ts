@@ -239,8 +239,9 @@ serve(async (req) => {
         .from('orchestrator_runs')
         .select(`
           *,
-          blockers:orchestrator_manual_tasks(*)
+          blockers:orchestrator_manual_tasks!inner(*)
         `)
+        .eq('blockers.status', 'open')
         .order('created_at', { ascending: false })
 
       if (error) {

@@ -148,18 +148,20 @@ function transformSupabaseRuns(runs: unknown[]): RunRecord[] {
       createdAt: run.created_at as string,
       updatedAt: run.updated_at as string,
       brief: run.brief as RunRecord['brief'],
-      blockers: (run.blockers || []).map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-        id: task.id,
-        runId: task.run_id,
-        phase: task.phase as 'prioritize',
-        type: task.task_type,
-        title: task.title,
-        description: task.description,
-        createdAt: task.created_at,
-        dueAt: task.due_at,
-        completedAt: task.completed_at,
-        assignee: task.assignee
-      }))
+      blockers: (run.blockers || [])
+        .filter((task: any) => task.status === 'open') // Only include open tasks // eslint-disable-line @typescript-eslint/no-explicit-any
+        .map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          id: task.id,
+          runId: task.run_id,
+          phase: task.phase as 'prioritize',
+          type: task.task_type,
+          title: task.title,
+          description: task.description,
+          createdAt: task.created_at,
+          dueAt: task.due_at,
+          completedAt: task.completed_at,
+          assignee: task.assignee
+        }))
     };
     
     console.log(`✅ Transformed run ${index}:`, transformedRun.brief?.theme, 'blockers:', transformedRun.blockers.length);
