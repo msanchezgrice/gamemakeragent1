@@ -46,7 +46,7 @@ export default function LogsPage() {
       if (response.ok) {
         const runs = await response.json();
         // Convert runs to log entries
-        realLogs = runs.slice(0, 6).map((run: any, index: number) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        realLogs = runs.slice(0, 6).map((run: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
           id: `run-${run.id}`,
           timestamp: run.updated_at,
           level: run.status === 'failed' ? 'error' as const : 
