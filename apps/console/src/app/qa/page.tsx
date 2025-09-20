@@ -36,7 +36,7 @@ export default function QADashboard() {
 
   const qaRuns = runs.filter((run) => run.phase === 'qa' || run.status === 'awaiting_human');
   
-  // Mock QA data
+  // Real QA data from runs
   const qaData = qaRuns.map((run) => ({
     ...run,
     qaMetrics: {

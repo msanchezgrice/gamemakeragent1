@@ -37,7 +37,7 @@ export default function DeployPage() {
     run.phase === 'deploy' || run.phase === 'measure' || run.status === 'done'
   );
   
-  // Mock deployment data
+  // Real deployment data from runs
   const deployments = deployRuns.map((run) => ({
     ...run,
     deploymentStatus: (run.status === 'done' ? 'live' : 
