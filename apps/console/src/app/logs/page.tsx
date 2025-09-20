@@ -22,7 +22,10 @@ interface LogEntry {
   runId?: string;
   phase?: string;
   projectName?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    thinking_trace?: string;
+    llm_response?: string;
+  };
 }
 
 export default function LogsPage() {
