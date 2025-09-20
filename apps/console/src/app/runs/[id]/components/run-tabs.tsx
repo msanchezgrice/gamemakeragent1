@@ -13,8 +13,7 @@ import {
   Clock,
   User,
   CheckCircle,
-  Settings,
-  AlertCircle
+  Settings
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
@@ -518,6 +517,8 @@ function ActivityTab({ run }: { run: RunRecord }) {
                       ? 'bg-warning'
                       : activity.type === 'run_completed'
                       ? 'bg-success'
+                      : activity.type === 'error'
+                      ? 'bg-red-400'
                       : 'bg-slate-400'
                   }`} />
               <div className="flex-1 min-w-0">
