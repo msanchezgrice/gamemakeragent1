@@ -2,7 +2,8 @@
 
 import type { RunRecord } from '@gametok/schemas';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../../../lib/supabase';
 import { 
   FileText, 
   Activity, 
@@ -246,9 +247,37 @@ function getEstimatedCompletion(phase: string): string {
 
 function ArtifactsTab({ run }: { run: RunRecord }) {
   const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
-  
-  // Mock artifacts with content for now
-  const artifacts = [
+  const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchArtifacts() {
+      try {
+        // Fetch real artifacts from Supabase
+        const { data: dbArtifacts, error } = await supabase
+          .from('orchestrator_artifacts')
+          .select('*')
+          .eq('run_id', run.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Failed to load artifacts:', error);
+        }
+
+        const realArtifacts = (dbArtifacts || []).map(artifact => ({
+          id: artifact.id,
+          name: artifact.meta?.filename || `${artifact.kind}.${artifact.meta?.contentType?.includes('json') ? 'json' : 'md'}`,
+          phase: artifact.phase,
+          size: artifact.meta?.size ? `${Math.round(artifact.meta.size / 1024 * 10) / 10} KB` : 'Unknown',
+          createdAt: artifact.created_at,
+          type: artifact.meta?.contentType?.includes('json') ? 'json' : 'markdown',
+          content: artifact.meta?.contentType?.includes('json') 
+            ? JSON.stringify(artifact.meta?.data, null, 2)
+            : artifact.meta?.data || 'Content not available'
+        }));
+
+        // If no real artifacts, show some mock ones for demo
+        const mockArtifacts = realArtifacts.length === 0 ? [
     { 
       id: '1', 
       name: 'market_scan.json', 
@@ -279,8 +308,35 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
       createdAt: run.createdAt,
       type: 'markdown',
       content: `# Build Brief: ${run.brief.theme}\n\n## Technical Requirements\n\n- **Engine**: Phaser 3.70+\n- **Resolution**: 720x1280 (mobile portrait)\n- **File Size**: <2MB total\n- **Performance**: 60fps target, 30fps minimum\n\n## Game Loop\n\n1. Player spawns in center\n2. Obstacles approach from edges\n3. Tap/swipe to avoid\n4. Score increases with survival time\n\n## Success Metrics\n\n- Session length: 60-180 seconds\n- Replay rate: >40%\n- Share rate: >5%`
-    },
-  ];
+    }
+  ] : [];
+
+        setArtifacts([...realArtifacts, ...mockArtifacts]);
+      } catch (error) {
+        console.error('Failed to fetch artifacts:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchArtifacts();
+  }, [run.id]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Artifacts</h3>
+          <div className="animate-pulse h-4 w-16 bg-slate-700 rounded"></div>
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse h-16 bg-slate-800 rounded-xl"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

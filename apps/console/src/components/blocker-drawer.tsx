@@ -51,9 +51,12 @@ export function BlockerDrawer({ tasks }: BlockerDrawerProps) {
                 <h4 className="mt-2 text-sm font-semibold text-white">{task.title}</h4>
                 <p className="mt-1 text-xs text-slate-300/90 leading-relaxed">{task.description}</p>
               </div>
-              <button className={cn('inline-flex items-center gap-1 text-warning text-xs font-medium hover:text-accent transition-colors')}>
+              <a 
+                href={`/runs/${task.runId}`}
+                className={cn('inline-flex items-center gap-1 text-warning text-xs font-medium hover:text-accent transition-colors')}
+              >
                 Open run <ArrowUpRight className="h-3 w-3" />
-              </button>
+              </a>
             </div>
             <div className="mt-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-warning/70">
               <Clock className="h-3 w-3" /> created {timeAgo(task.createdAt)}

@@ -48,6 +48,10 @@ export const PHASES: Array<{
 export function RunTimeline({ run }: RunTimelineProps) {
   const currentPhaseIndex = PHASES.findIndex(p => p.key === run.phase);
   
+  // If run is awaiting human review, we've completed the current phase work
+  // and are waiting for approval to continue
+  const effectiveCurrentIndex = run.status === 'awaiting_human' ? currentPhaseIndex : currentPhaseIndex;
+  
   return (
     <div className="rounded-3xl border border-slate-800/70 bg-surface/70 p-6 backdrop-blur">
       <header className="mb-6">
@@ -57,9 +61,10 @@ export function RunTimeline({ run }: RunTimelineProps) {
 
       <div className="space-y-4">
         {PHASES.map((phase, index) => {
-          const isCompleted = index < currentPhaseIndex;
-          const isCurrent = index === currentPhaseIndex;
-          const isPending = index > currentPhaseIndex;
+          const isCompleted = index < effectiveCurrentIndex || 
+                             (index === effectiveCurrentIndex && run.status === 'awaiting_human');
+          const isCurrent = index === effectiveCurrentIndex && run.status !== 'awaiting_human';
+          const isPending = index > effectiveCurrentIndex;
           
           return (
             <motion.div
