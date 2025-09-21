@@ -14,7 +14,8 @@ import {
   User,
   CheckCircle,
   Settings,
-  Layers
+  Layers,
+  Play
 } from 'lucide-react';
 import { PHASES } from '../components/run-timeline';
 import { cn } from '../../../../lib/utils';
@@ -632,6 +633,7 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
 
 function ArtifactsTab({ run }: { run: RunRecord }) {
   const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
+  const [playingGame, setPlayingGame] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<Array<{
     id: string;
     name: string;
@@ -640,6 +642,8 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
     createdAt: string;
     type: string;
     content: string;
+    kind: string;
+    isPlayable: boolean;
   }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -669,6 +673,8 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
           size: artifact.meta?.size ? `${Math.round(artifact.meta.size / 1024 * 10) / 10} KB` : 'Unknown',
           createdAt: artifact.created_at,
           type: artifact.meta?.contentType?.includes('json') ? 'json' : 'markdown',
+          kind: artifact.kind,
+          isPlayable: artifact.kind === 'game_prototype' && (artifact.meta as { playable?: string })?.playable === 'true',
           content: artifact.meta?.contentType?.includes('json') 
             ? JSON.stringify(artifact.meta?.data, null, 2)
             : artifact.meta?.data || 'Content not available'
@@ -713,15 +719,37 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
           <div key={artifact.id}>
             <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-800/50 bg-slate-900/40 hover:bg-slate-900/60 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-primary" />
+                <div className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center",
+                  artifact.isPlayable ? "bg-success/10" : "bg-primary/10"
+                )}>
+                  {artifact.isPlayable ? (
+                    <Play className="h-5 w-5 text-success" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-primary" />
+                  )}
                 </div>
                 <div>
-                  <h4 className="font-medium text-white">{artifact.name}</h4>
+                  <h4 className="font-medium text-white">
+                    {artifact.name}
+                    {artifact.isPlayable && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
+                        Playable
+                      </span>
+                    )}
+                  </h4>
                   <p className="text-sm text-slate-400">{artifact.phase} • {artifact.size}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {artifact.isPlayable && (
+                  <button 
+                    onClick={() => setPlayingGame(artifact.id)}
+                    className="px-3 py-1 bg-success text-black rounded-lg text-xs font-medium hover:bg-success/90 transition-colors"
+                  >
+                    Play Game
+                  </button>
+                )}
                 <button 
                   onClick={() => setSelectedArtifact(selectedArtifact === artifact.id ? null : artifact.id)}
                   className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors"
@@ -756,6 +784,14 @@ function ArtifactsTab({ run }: { run: RunRecord }) {
           </div>
         ))}
       </div>
+      
+      {/* Game Player Modal */}
+      {playingGame && (
+        <GamePlayerModal 
+          artifact={artifacts.find(a => a.id === playingGame)!} 
+          onClose={() => setPlayingGame(null)} 
+        />
+      )}
     </div>
   );
 }
@@ -1132,4 +1168,79 @@ function timeAgo(dateIso: string) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   return `${days}d ago`;
+}
+
+function GamePlayerModal({ 
+  artifact, 
+  onClose 
+}: { 
+  artifact: {
+    id: string;
+    name: string;
+    content: string;
+    kind: string;
+  }; 
+  onClose: () => void; 
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-surface border border-slate-800 rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Game Testing</h3>
+            <p className="text-sm text-slate-400 mt-1">{artifact.name}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="bg-black rounded-2xl overflow-hidden mb-4" style={{ aspectRatio: '9/16', height: '500px' }}>
+          {artifact.content ? (
+            <iframe
+              srcDoc={artifact.content}
+              className="w-full h-full border-0"
+              title={artifact.name}
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400">
+              <div className="text-center">
+                <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No prototype available</p>
+                <p className="text-sm mt-2">Build phase may not be complete</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/50 transition-colors"
+          >
+            Close
+          </button>
+          <button className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors">
+            Open in QA
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }

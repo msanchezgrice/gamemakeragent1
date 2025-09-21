@@ -2511,12 +2511,13 @@ serve(async (req) => {
 
     // Routes
     if (method === 'GET' && path === '/runs') {
-      // List all runs
+      // List all runs with prototype information
       const { data: runs, error } = await supabaseClient
         .from('orchestrator_runs')
         .select(`
           *,
-          blockers:orchestrator_manual_tasks(*)
+          blockers:orchestrator_manual_tasks(*),
+          prototypes:orchestrator_artifacts(id, kind, meta)
         `)
         .order('created_at', { ascending: false })
 
