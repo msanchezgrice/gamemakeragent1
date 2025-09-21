@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, 
   Rocket, 
@@ -14,17 +14,55 @@ import {
   Database,
   BarChart,
   Globe,
-  Zap
+  Zap,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { createRun } from '../../../lib/data-source';
 import { useToast } from '../../../components/toast-provider';
+
+// Dropdown options for enhanced intake form
+const GAME_TYPES = [
+  { value: 'runner', label: 'Endless Runner', description: 'Fast-paced running games with obstacles' },
+  { value: 'puzzle', label: 'Puzzle Game', description: 'Logic-based challenges and brain teasers' },
+  { value: 'arcade', label: 'Arcade Game', description: 'Classic arcade-style gameplay' },
+  { value: 'strategy', label: 'Strategy Game', description: 'Planning and tactical gameplay' },
+  { value: 'casual', label: 'Casual Game', description: 'Easy-to-learn, relaxing gameplay' },
+  { value: 'action', label: 'Action Game', description: 'Fast-paced action and reflexes' },
+  { value: 'simulation', label: 'Simulation', description: 'Real-world simulation games' },
+  { value: 'educational', label: 'Educational', description: 'Learning-focused games' }
+];
+
+const CONTROL_TYPES = [
+  { value: 'tap', label: 'Tap Controls', description: 'Simple tap-to-play mechanics' },
+  { value: 'swipe', label: 'Swipe Controls', description: 'Gesture-based swiping controls' },
+  { value: 'drag', label: 'Drag & Drop', description: 'Drag and drop interactions' },
+  { value: 'tilt', label: 'Tilt Controls', description: 'Device tilt/accelerometer controls' },
+  { value: 'joystick', label: 'Virtual Joystick', description: 'On-screen joystick controls' },
+  { value: 'buttons', label: 'Button Controls', description: 'Traditional button-based controls' },
+  { value: 'gesture', label: 'Gesture Controls', description: 'Complex gesture recognition' }
+];
+
+const THEME_OPTIONS = [
+  { value: 'space', label: 'Space Adventure', description: 'Cosmic exploration and sci-fi themes' },
+  { value: 'fantasy', label: 'Fantasy World', description: 'Magic, dragons, and mythical creatures' },
+  { value: 'nature', label: 'Nature & Animals', description: 'Wildlife, forests, and natural environments' },
+  { value: 'underwater', label: 'Underwater', description: 'Ocean depths and marine life' },
+  { value: 'city', label: 'Urban City', description: 'Modern city environments and buildings' },
+  { value: 'retro', label: 'Retro/Pixel', description: 'Nostalgic pixel art and retro aesthetics' },
+  { value: 'minimalist', label: 'Minimalist', description: 'Clean, simple, geometric designs' },
+  { value: 'cartoon', label: 'Cartoon Style', description: 'Colorful, animated cartoon graphics' },
+  { value: 'abstract', label: 'Abstract Art', description: 'Artistic, non-representational visuals' },
+  { value: 'sports', label: 'Sports Theme', description: 'Athletic and competitive sports' }
+];
 
 interface IntakeBrief {
   industry: string;
   targetAudience: string;
   goal: string;
   theme: string;
+  gameType: string;
+  controlType: string;
   competitorAnalysis: {
     enabled: boolean;
     competitors: string[];
@@ -49,14 +87,17 @@ interface IntakeBrief {
   };
 }
 
-export default function NewRunPage() {
+function NewRunForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToast } = useToast();
   const [brief, setBrief] = useState<IntakeBrief>({
     industry: '',
     targetAudience: '',
     goal: '',
     theme: '',
+    gameType: '',
+    controlType: '',
     competitorAnalysis: {
       enabled: false,
       competitors: [],
@@ -76,6 +117,33 @@ export default function NewRunPage() {
     },
     constraints: {}
   });
+
+  // Handle remix functionality
+  useEffect(() => {
+    const isRemix = searchParams.get('remix') === 'true';
+    if (isRemix) {
+      const remixData = localStorage.getItem('remixData');
+      if (remixData) {
+        try {
+          const parsedData = JSON.parse(remixData);
+          setBrief(prev => ({
+            ...prev,
+            ...parsedData
+          }));
+          // Clear the remix data after loading
+          localStorage.removeItem('remixData');
+          
+          addToast({
+            type: 'success',
+            title: 'Remix Loaded',
+            description: 'Game data has been pre-filled for remixing. Modify as needed.'
+          });
+        } catch (error) {
+          console.error('Failed to parse remix data:', error);
+        }
+      }
+    }
+  }, [searchParams, addToast]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -179,12 +247,29 @@ export default function NewRunPage() {
             />
           </div>
           
-          <div className="mt-6">
-            <FormField
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            <FormDropdown
+              label="Game Type"
+              value={brief.gameType}
+              onChange={(value) => updateBrief('gameType', value)}
+              options={GAME_TYPES}
+              placeholder="Select game type"
+              required
+            />
+            <FormDropdown
+              label="Control Type"
+              value={brief.controlType}
+              onChange={(value) => updateBrief('controlType', value)}
+              options={CONTROL_TYPES}
+              placeholder="Select controls"
+              required
+            />
+            <FormDropdown
               label="Theme"
               value={brief.theme}
               onChange={(value) => updateBrief('theme', value)}
-              placeholder="e.g., Space Adventure, Puzzle Solver, Racing Challenge"
+              options={THEME_OPTIONS}
+              placeholder="Select theme"
               required
             />
           </div>
@@ -434,6 +519,94 @@ function FormField({
   );
 }
 
+interface FormDropdownProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string; description: string }>;
+  placeholder: string;
+  required?: boolean;
+  description?: string;
+}
+
+function FormDropdown({ 
+  label, 
+  value, 
+  onChange, 
+  options, 
+  placeholder, 
+  required,
+  description 
+}: FormDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-white mb-2">
+        {label}
+        {required && <span className="text-warning ml-1">*</span>}
+      </label>
+      {description && (
+        <p className="text-xs text-slate-400 mb-2">{description}</p>
+      )}
+      
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-3 text-left focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-slate-600",
+          !selectedOption && "text-slate-500"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-white">
+              {selectedOption ? selectedOption.label : placeholder}
+            </div>
+            {selectedOption && (
+              <div className="text-xs text-slate-400 mt-1">
+                {selectedOption.description}
+              </div>
+            )}
+          </div>
+          <ChevronDown className={cn(
+            "h-4 w-4 text-slate-400 transition-transform",
+            isOpen && "rotate-180"
+          )} />
+        </div>
+      </button>
+
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto"
+        >
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "w-full px-4 py-3 text-left hover:bg-slate-800/50 transition-colors first:rounded-t-xl last:rounded-b-xl",
+                value === option.value && "bg-primary/10 text-primary"
+              )}
+            >
+              <div className="font-medium">{option.label}</div>
+              <div className="text-xs text-slate-400 mt-1">{option.description}</div>
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 interface ToggleFieldProps {
   label: string;
   description: string;
@@ -600,5 +773,25 @@ function FormTextArea({ label, value, onChange, placeholder, required }: FormTex
         <span>{value.length}/500</span>
       </div>
     </div>
+  );
+}
+
+export default function NewRunPage() {
+  return (
+    <Suspense fallback={
+      <main className="mx-auto max-w-4xl px-8 py-12">
+        <div className="animate-pulse">
+          <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-slate-700 rounded w-1/2 mb-8"></div>
+          <div className="space-y-6">
+            <div className="h-32 bg-slate-700 rounded"></div>
+            <div className="h-32 bg-slate-700 rounded"></div>
+            <div className="h-32 bg-slate-700 rounded"></div>
+          </div>
+        </div>
+      </main>
+    }>
+      <NewRunForm />
+    </Suspense>
   );
 }
