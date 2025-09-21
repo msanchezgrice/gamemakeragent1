@@ -1509,6 +1509,9 @@ Return ONLY valid JSON with this structure:
         }
       });
 
+    // Now perform automated code analysis and bug detection
+    await generateQACodeAnalysis(supabaseClient, runId, brief, prototype);
+
   } catch (error) {
     console.error(`❌ LLM call failed for QA strategy:`, error);
     
@@ -1602,6 +1605,270 @@ Return ONLY valid JSON with this structure:
           data: fallbackData,
           fallback: true,
           error: error.message
+        }
+      });
+  }
+}
+
+async function generateQACodeAnalysis(supabaseClient: any, runId: string, brief: any, prototype: any) {
+  console.log(`🔍 Performing automated code analysis for ${brief.theme}`);
+  
+  const prototypeCode = prototype.meta.data;
+  const gameSpecs = prototype.meta.specifications || {};
+  
+  // Enhanced QA code analysis prompt
+  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game code analysis. Analyze the following game prototype code for potential bugs, performance issues, and quality concerns.
+
+GAME CONTEXT:
+Theme: ${brief.theme}
+Industry: ${brief.industry}
+Target Audience: ${brief.targetAudience || 'General'}
+Game Type: ${(brief as any).gameType || 'Unknown'}
+Control Type: ${(brief as any).controlType || 'Unknown'}
+
+GAME SPECIFICATIONS:
+${JSON.stringify(gameSpecs, null, 2)}
+
+PROTOTYPE CODE TO ANALYZE:
+\`\`\`html
+${prototypeCode}
+\`\`\`
+
+Perform a comprehensive code analysis and identify:
+
+1. **FUNCTIONAL BUGS**: Logic errors, broken game mechanics, incorrect implementations
+2. **PERFORMANCE ISSUES**: Memory leaks, inefficient algorithms, rendering bottlenecks
+3. **MOBILE COMPATIBILITY**: Touch handling, responsive design, device-specific issues
+4. **SECURITY CONCERNS**: XSS vulnerabilities, unsafe practices
+5. **USER EXPERIENCE PROBLEMS**: Poor controls, confusing UI, accessibility issues
+6. **CODE QUALITY ISSUES**: Poor structure, missing error handling, maintainability concerns
+
+For each issue found, provide:
+- Severity level (Critical/High/Medium/Low)
+- Specific location in code (line numbers if possible)
+- Detailed description of the problem
+- Potential impact on users
+- Recommended fix or improvement
+- Testing steps to reproduce
+
+Return ONLY valid JSON with this structure:
+{
+  "analysisMetadata": {
+    "codeSize": "size in KB",
+    "complexity": "Low|Medium|High",
+    "overallQuality": "Poor|Fair|Good|Excellent",
+    "testability": "Poor|Fair|Good|Excellent",
+    "maintainability": "Poor|Fair|Good|Excellent"
+  },
+  "bugReport": [
+    {
+      "id": "unique_bug_id",
+      "severity": "Critical|High|Medium|Low",
+      "category": "Functional|Performance|Mobile|Security|UX|Code Quality",
+      "title": "Brief bug title",
+      "description": "Detailed description of the issue",
+      "location": "Code location or component affected",
+      "impact": "Impact on user experience or functionality",
+      "reproductionSteps": ["step1", "step2", "step3"],
+      "recommendedFix": "Specific fix recommendation",
+      "estimatedEffort": "Low|Medium|High"
+    }
+  ],
+  "performanceAnalysis": {
+    "renderingEfficiency": "assessment of rendering performance",
+    "memoryUsage": "memory usage analysis",
+    "eventHandling": "event handling efficiency",
+    "gameLoopOptimization": "game loop performance analysis"
+  },
+  "mobileCompatibility": {
+    "touchHandling": "touch input analysis",
+    "responsiveDesign": "responsive design assessment",
+    "deviceCompatibility": "device compatibility analysis",
+    "orientationSupport": "orientation handling analysis"
+  },
+  "securityAssessment": {
+    "xssVulnerabilities": "XSS vulnerability analysis",
+    "inputValidation": "input validation assessment",
+    "dataHandling": "data handling security analysis"
+  },
+  "recommendations": {
+    "immediate": ["critical fixes needed immediately"],
+    "shortTerm": ["improvements for next iteration"],
+    "longTerm": ["architectural improvements for future versions"]
+  },
+  "testingRecommendations": {
+    "automatedTests": ["suggested automated test cases"],
+    "manualTests": ["manual testing scenarios"],
+    "deviceTesting": ["specific devices/browsers to test"]
+  },
+  "qualityScore": {
+    "overall": "0-100 quality score",
+    "functional": "0-100 functional quality",
+    "performance": "0-100 performance score",
+    "maintainability": "0-100 maintainability score"
+  }
+}`;
+
+  try {
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    
+    // Make LLM API call for code analysis
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: codeAnalysisPrompt
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ LLM API error for code analysis: ${response.status} - ${errorText}`);
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+    }
+
+    const llmResult = await response.json();
+    const analysisText = llmResult.content[0].text;
+    
+    // Parse the JSON response
+    const analysisData = JSON.parse(analysisText);
+    
+    console.log(`✅ Generated code analysis with ${analysisData.bugReport?.length || 0} issues found`);
+
+    // Store analysis log
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'qa',
+        agent: 'qa-code-analyzer',
+        level: 'info',
+        message: `Code analysis completed: ${analysisData.bugReport?.length || 0} issues found, quality score: ${analysisData.qualityScore?.overall || 'N/A'}`,
+        thinking_trace: codeAnalysisPrompt,
+        llm_response: analysisText,
+        created_at: new Date().toISOString()
+      });
+
+    // Store code analysis artifact
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'qa',
+        kind: 'code_analysis',
+        path: `runs/${runId}/code_analysis.json`,
+        meta: {
+          filename: 'code_analysis.json',
+          size: JSON.stringify(analysisData).length,
+          contentType: 'application/json',
+          data: analysisData,
+          llm_model: 'claude-3-5-sonnet-20241022',
+          generated_at: new Date().toISOString(),
+          bugsFound: analysisData.bugReport?.length || 0,
+          qualityScore: analysisData.qualityScore?.overall || 0
+        }
+      });
+
+  } catch (error) {
+    console.error(`❌ Code analysis failed:`, error);
+    
+    // Fallback analysis
+    const fallbackAnalysis = {
+      analysisMetadata: {
+        codeSize: `${Math.round((prototypeCode?.length || 0) / 1024)}KB`,
+        complexity: "Medium",
+        overallQuality: "Fair",
+        testability: "Fair",
+        maintainability: "Fair"
+      },
+      bugReport: [
+        {
+          id: "fallback_001",
+          severity: "Medium",
+          category: "Code Quality",
+          title: "Automated analysis unavailable",
+          description: "Code analysis could not be completed automatically. Manual review recommended.",
+          location: "Entire codebase",
+          impact: "Unknown potential issues may exist",
+          reproductionSteps: ["Manual code review required"],
+          recommendedFix: "Perform manual code review and testing",
+          estimatedEffort: "Medium"
+        }
+      ],
+      performanceAnalysis: {
+        renderingEfficiency: "Requires manual assessment",
+        memoryUsage: "Requires profiling",
+        eventHandling: "Requires testing",
+        gameLoopOptimization: "Requires performance analysis"
+      },
+      mobileCompatibility: {
+        touchHandling: "Requires device testing",
+        responsiveDesign: "Requires multi-device testing",
+        deviceCompatibility: "Requires compatibility testing",
+        orientationSupport: "Requires orientation testing"
+      },
+      securityAssessment: {
+        xssVulnerabilities: "Requires security audit",
+        inputValidation: "Requires validation testing",
+        dataHandling: "Requires security review"
+      },
+      recommendations: {
+        immediate: ["Perform manual code review", "Test on target devices"],
+        shortTerm: ["Set up automated testing", "Performance profiling"],
+        longTerm: ["Implement comprehensive QA pipeline"]
+      },
+      testingRecommendations: {
+        automatedTests: ["Unit tests for game logic", "Performance benchmarks"],
+        manualTests: ["Device compatibility testing", "User experience testing"],
+        deviceTesting: ["iOS Safari", "Android Chrome", "Various screen sizes"]
+      },
+      qualityScore: {
+        overall: "75",
+        functional: "75",
+        performance: "75",
+        maintainability: "75"
+      }
+    };
+
+    // Store fallback analysis
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'qa',
+        agent: 'qa-code-analyzer',
+        level: 'error',
+        message: `Code analysis failed, using fallback: ${error.message}`,
+        thinking_trace: codeAnalysisPrompt,
+        llm_response: JSON.stringify(fallbackAnalysis),
+        created_at: new Date().toISOString()
+      });
+
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'qa',
+        kind: 'code_analysis',
+        path: `runs/${runId}/code_analysis.json`,
+        meta: {
+          filename: 'code_analysis.json',
+          size: JSON.stringify(fallbackAnalysis).length,
+          contentType: 'application/json',
+          data: fallbackAnalysis,
+          fallback: true,
+          error: error.message,
+          bugsFound: 1,
+          qualityScore: 75
         }
       });
   }

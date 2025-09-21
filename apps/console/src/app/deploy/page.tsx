@@ -7,7 +7,11 @@ import { DeploymentBoardSkeleton } from '../../components/skeleton';
 import type { RunRecord } from '@gametok/schemas';
 
 export default function DeployPage() {
-  const [runs, setRuns] = useState<Array<RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }>>([]);
+  const [runs, setRuns] = useState<Array<RunRecord & { 
+    hasPrototype?: boolean;
+    prototypeData?: unknown;
+    metrics?: { progress?: number; playRate?: number; likability?: number } 
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,9 +37,15 @@ export default function DeployPage() {
     );
   }
 
-  // Only show runs that have actually reached deployment phase
+  // Only show runs that have completed prototypes and are ready for deployment
   const deployRuns = runs.filter((run) => 
-    (run.phase === 'deploy' || run.phase === 'measure' || run.status === 'done') &&
+    run.hasPrototype && // Must have a prototype
+    (
+      // Either currently in deploy/measure phase
+      (run.phase === 'deploy' || run.phase === 'measure') ||
+      // Or has completed the entire pipeline
+      run.status === 'done'
+    ) &&
     run.status !== 'queued' // Don't show queued runs
   );
   

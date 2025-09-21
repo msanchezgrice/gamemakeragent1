@@ -50,11 +50,17 @@ export default function QADashboard() {
     );
   }
 
-  // Only show runs that are in QA phase AND have completed prototypes
+  // Show all runs that have completed prototypes (regardless of current phase)
   const qaRuns = runs.filter((run) => 
-    run.phase === 'qa' && 
-    (run.status === 'running' || run.status === 'awaiting_human') &&
-    run.hasPrototype // This will be added to the data loading
+    run.hasPrototype && // Must have a prototype
+    (
+      // Either currently in QA phase
+      (run.phase === 'qa' && (run.status === 'running' || run.status === 'awaiting_human')) ||
+      // Or has completed QA and moved to later phases (deploy, decision, etc.)
+      (['deploy', 'measure', 'decision'].includes(run.phase)) ||
+      // Or is done
+      run.status === 'done'
+    )
   );
   
   // Only show real QA data if we have actual games to test

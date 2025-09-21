@@ -8,12 +8,14 @@ import {
   CheckCircle, 
   Copy, 
   ExternalLink,
-  Image
+  Play
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface DeploymentBoardProps {
   deployments: Array<RunRecord & {
+    hasPrototype?: boolean;
+    prototypeData?: unknown;
     deploymentStatus: 'to_upload' | 'uploading' | 'live';
     gameVariants: Array<{
       id: string;
@@ -114,12 +116,17 @@ function DeploymentCard({
   deployment: DeploymentBoardProps['deployments'][0] 
 }) {
   const variant = deployment.gameVariants[0];
+  const prototypeData = deployment.prototypeData as { data?: string; size?: number } | undefined;
+  const prototypeSize = prototypeData?.size ? Math.round(prototypeData.size / 1024) : 0;
   
   return (
     <div className="rounded-2xl border border-slate-800/50 bg-slate-900/40 p-4 hover:bg-slate-900/60 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="h-16 w-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-          <Image className="h-6 w-6 text-slate-400" aria-label="Game thumbnail placeholder" />
+        <div className="h-16 w-12 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center flex-shrink-0 relative">
+          <Play className="h-6 w-6 text-white" />
+          {deployment.hasPrototype && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border border-slate-900"></div>
+          )}
         </div>
         
         <div className="flex-1 min-w-0">
@@ -127,14 +134,14 @@ function DeploymentCard({
           <p className="text-sm text-slate-400">{deployment.brief.industry}</p>
           
           <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-            <span>{variant.orientation}</span>
-            <span>{variant.buildSize}KB</span>
+            <span>Portrait</span>
+            <span>{variant?.buildSize || prototypeSize}KB</span>
             {deployment.metadata.clipcadeId && (
               <span className="text-success">ID: {deployment.metadata.clipcadeId}</span>
             )}
           </div>
 
-          {deployment.deploymentStatus === 'uploading' && (
+          {deployment.deploymentStatus === 'uploading' && variant && (
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="text-slate-400">Upload Progress</span>
@@ -154,6 +161,19 @@ function DeploymentCard({
       </div>
 
       <div className="flex items-center gap-2 mt-4">
+        {deployment.hasPrototype && (
+          <button 
+            onClick={() => {
+              // Open game player modal - we'll implement this
+              console.log('Play prototype for:', deployment.brief.theme);
+            }}
+            className="px-3 py-2 bg-primary/20 text-primary rounded-lg text-sm font-medium hover:bg-primary/30 transition-colors flex items-center gap-1"
+          >
+            <Play className="h-3 w-3" />
+            Test
+          </button>
+        )}
+        
         {deployment.deploymentStatus === 'to_upload' && (
           <button className="flex-1 px-3 py-2 bg-warning text-black rounded-lg text-sm font-medium hover:bg-warning/90 transition-colors">
             Upload to Clipcade
@@ -169,7 +189,10 @@ function DeploymentCard({
           </button>
         )}
         
-        <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors">
+        <button 
+          className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors"
+          onClick={() => window.open(`/runs/${deployment.id}`, '_blank')}
+        >
           <ExternalLink className="h-4 w-4" />
         </button>
       </div>
