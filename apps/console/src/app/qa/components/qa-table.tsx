@@ -12,8 +12,22 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
+interface PrototypeData {
+  data?: string;
+  filename?: string;
+  playable?: boolean;
+  specifications?: {
+    engine?: string;
+    resolution?: string;
+    fileSize?: string;
+    features?: string[];
+  };
+}
+
 interface QATableProps {
   runs: Array<RunRecord & {
+    hasPrototype?: boolean;
+    prototypeData?: PrototypeData;
     qaMetrics: {
       ttfi: number;
       fps: number;
@@ -27,6 +41,7 @@ interface QATableProps {
 
 export function QATable({ runs }: QATableProps) {
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
+  const [playingGame, setPlayingGame] = useState<string | null>(null);
 
   return (
     <div className="rounded-3xl border border-slate-800/70 bg-surface/70 backdrop-blur overflow-hidden">
@@ -128,7 +143,11 @@ export function QATable({ runs }: QATableProps) {
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
-                    <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors">
+                    <button 
+                      onClick={() => setPlayingGame(run.id)}
+                      className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors"
+                      title="Play Game"
+                    >
                       <Play className="h-4 w-4" />
                     </button>
                     <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors">
@@ -151,6 +170,13 @@ export function QATable({ runs }: QATableProps) {
         <QADetailModal 
           run={runs.find(r => r.id === selectedRun)!} 
           onClose={() => setSelectedRun(null)} 
+        />
+      )}
+      
+      {playingGame && (
+        <GamePlayerModal 
+          run={runs.find(r => r.id === playingGame)!} 
+          onClose={() => setPlayingGame(null)} 
         />
       )}
     </div>
@@ -258,6 +284,79 @@ function QADetailModal({
             )}
           >
             {allChecked ? "Confirm QA" : `${checkedItems.size}/${checklistItems.length} checked`}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function GamePlayerModal({ 
+  run, 
+  onClose 
+}: { 
+  run: QATableProps['runs'][0]; 
+  onClose: () => void; 
+}) {
+  // Get prototype HTML from run data (this will need to be fetched from the API)
+  const prototypeHTML = run.prototypeData?.data || '';
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-surface border border-slate-800 rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Game Testing</h3>
+            <p className="text-sm text-slate-400 mt-1">{run.brief.theme}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="bg-black rounded-2xl overflow-hidden mb-4" style={{ aspectRatio: '9/16', height: '500px' }}>
+          {prototypeHTML ? (
+            <iframe
+              srcDoc={prototypeHTML}
+              className="w-full h-full border-0"
+              title={`${run.brief.theme} Game`}
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400">
+              <div className="text-center">
+                <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No prototype available</p>
+                <p className="text-sm mt-2">Build phase may not be complete</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/50 transition-colors"
+          >
+            Close
+          </button>
+          <button className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors">
+            Pass QA
           </button>
         </div>
       </motion.div>

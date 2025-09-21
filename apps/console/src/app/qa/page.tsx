@@ -7,8 +7,24 @@ import { QAStats } from './components/qa-stats';
 import { QATableSkeleton } from '../../components/skeleton';
 import type { RunRecord } from '@gametok/schemas';
 
+interface PrototypeData {
+  data?: string;
+  filename?: string;
+  playable?: boolean;
+  specifications?: {
+    engine?: string;
+    resolution?: string;
+    fileSize?: string;
+    features?: string[];
+  };
+}
+
 export default function QADashboard() {
-  const [runs, setRuns] = useState<Array<RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }>>([]);
+  const [runs, setRuns] = useState<Array<RunRecord & { 
+    hasPrototype?: boolean; 
+    prototypeData?: PrototypeData;
+    metrics?: { progress?: number; playRate?: number; likability?: number } 
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,10 +50,11 @@ export default function QADashboard() {
     );
   }
 
-  // Only show runs that are actually in QA phase and have completed build
+  // Only show runs that are in QA phase AND have completed prototypes
   const qaRuns = runs.filter((run) => 
     run.phase === 'qa' && 
-    (run.status === 'running' || run.status === 'awaiting_human')
+    (run.status === 'running' || run.status === 'awaiting_human') &&
+    run.hasPrototype // This will be added to the data loading
   );
   
   // Only show real QA data if we have actual games to test

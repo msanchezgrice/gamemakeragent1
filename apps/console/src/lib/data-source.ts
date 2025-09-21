@@ -109,7 +109,8 @@ export async function loadRuns(): Promise<RunWithMetrics[]> {
       .from('orchestrator_runs')
       .select(`
         *,
-        blockers:orchestrator_manual_tasks(*)
+        blockers:orchestrator_manual_tasks(*),
+        prototypes:orchestrator_artifacts(id, kind, meta)
       `)
       .order('created_at', { ascending: false });
 
@@ -141,13 +142,15 @@ function transformSupabaseRuns(runs: unknown[]): RunRecord[] {
   return runs.map((run: any, index) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.log(`🔧 Transform run ${index}:`, run.id, run.brief?.theme || 'No theme');
     
-    const transformedRun: RunRecord = {
+    const transformedRun: RunRecord & { hasPrototype?: boolean; prototypeData?: unknown } = {
       id: run.id as string,
       status: run.status as RunRecord['status'],
       phase: run.phase as RunRecord['phase'],
       createdAt: run.created_at as string,
       updatedAt: run.updated_at as string,
       brief: run.brief as RunRecord['brief'],
+      hasPrototype: (run.prototypes || []).filter((p: unknown) => (p as { kind: string }).kind === 'game_prototype').length > 0,
+      prototypeData: (run.prototypes || []).find((p: unknown) => (p as { kind: string }).kind === 'game_prototype')?.meta || null,
       blockers: (run.blockers || [])
         .filter((task: any) => task.status === 'open') // eslint-disable-line @typescript-eslint/no-explicit-any -- Only include open tasks
         .map((task: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
