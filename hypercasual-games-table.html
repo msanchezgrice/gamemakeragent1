@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyper-Casual Games Analysis</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .intro {
+            background: linear-gradient(135deg, #667eea15, #764ba215);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        
+        .variables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .variable-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .variable-card h3 {
+            margin: 0 0 8px 0;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .variable-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.85em;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        th:last-child {
+            border-right: none;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f0f0ff;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-right: 1px solid #e0e0e0;
+        }
+        
+        td:last-child {
+            border-right: none;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .type-runner { background: #ffd4a3; color: #8b5a00; }
+        .type-puzzle { background: #b8e6b8; color: #2d5a2d; }
+        .type-arcade { background: #ffb3ba; color: #8b0020; }
+        .type-io { background: #bae1ff; color: #003d6b; }
+        .type-idle { background: #ffffba; color: #8b8b00; }
+        .type-physics { background: #e6ccff; color: #5a00b3; }
+        .type-tower { background: #ffc6b3; color: #8b3a00; }
+        .type-merge { background: #c9f0ff; color: #006080; }
+        
+        .control-tap { background: #e3f2fd; color: #1565c0; }
+        .control-swipe { background: #f3e5f5; color: #6a1b9a; }
+        .control-drag { background: #e8f5e9; color: #2e7d32; }
+        .control-tilt { background: #fff3e0; color: #e65100; }
+        
+        @media (max-width: 768px) {
+            body {
+                margin: 10px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 0.75em;
+            }
+            
+            th, td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Hyper-Casual Games Analysis Matrix</h1>
+        
+        <div class="intro">
+            <p><strong>Comprehensive analysis of 50 top-performing hyper-casual games</strong> across all major categories, control schemes, and design patterns. This matrix captures the essential variables that determine success in the hyper-casual market.</p>
+        </div>
+        
+        <h2>📊 Core Design Variables</h2>
+        
+        <div class="variables-grid">
+            <div class="variable-card">
+                <h3>Game Type</h3>
+                <p>The fundamental genre category: Runner, Puzzle, Arcade, IO, Idle, Physics, Tower Defense, Merge</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Core Mechanic</h3>
+                <p>Primary interaction method: Tap, Swipe, Drag, Hold, Tilt, Multi-touch</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Theme/Setting</h3>
+                <p>Visual and narrative context: Abstract, Urban, Fantasy, Space, Nature, Food, Sports</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Session Length</h3>
+                <p>Typical play duration in minutes, critical for retention and ad placement</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Progression System</h3>
+                <p>How players advance: Endless, Levels, Hybrid, Score-based, Collection</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Difficulty Curve</h3>
+                <p>How challenge increases: Linear, Exponential, Stepped, Adaptive, Random</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Monetization</h3>
+                <p>Revenue model: Ads-only, IAP, Hybrid, Rewarded video, Interstitial</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Visual Style</h3>
+                <p>Art direction: Minimalist, Cartoon, 3D Low-poly, Pixel, Realistic, Neon</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Fail State</h3>
+                <p>How players lose: Instant death, Lives system, Timer, Energy, Score threshold</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Social Features</h3>
+                <p>Multiplayer elements: Leaderboard, Share, PvP, Co-op, Ghost replay</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Key Metric</h3>
+                <p>Primary success measure: Score, Distance, Time, Coins, Level, Collection %</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Onboarding</h3>
+                <p>Learning approach: None (intuitive), Tutorial, Ghost hands, Progressive reveal</p>
+            </div>
+        </div>
+        
+        <h2>🎯 50 Hyper-Casual Games Comprehensive Analysis</h2>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Game Name</th>
+                        <th>Type</th>
+                        <th>Core Mechanic</th>
+                        <th>Theme</th>
+                        <th>Visual Style</th>
+                        <th>Session (min)</th>
+                        <th>Progression</th>
+                        <th>Difficulty</th>
+                        <th>Monetization</th>
+                        <th>Fail State</th>
+                        <th>Social</th>
+                        <th>Key Metric</th>
+                        <th>Onboarding</th>
+                        <th>Hook Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Subway Surfers</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Urban</td>
+                        <td>Cartoon 3D</td>
+                        <td>3-5</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Hybrid</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Distance</td>
+                        <td>Tutorial</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Temple Run 2</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe+Tilt</span></td>
+                        <td>Adventure</td>
+                        <td>3D Realistic</td>
+                        <td>2-4</td>
+                        <td>Endless</td>
+                        <td>Exponential</td>
+                        <td>Hybrid</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Distance</td>
+                        <td>Ghost hands</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Candy Crush Saga</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Candy</td>
+                        <td>Cartoon</td>
+                        <td>5-7</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Hybrid</td>
+                        <td>Lives</td>
+                        <td>Leaderboard</td>
+                        <td>Level</td>
+                        <td>Tutorial</td>
+                        <td>30 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Helix Jump</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist 3D</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>None</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Paper.io 2</strong></td>
+                        <td><span class="badge type-io">IO</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>3-5</td>
+                        <td>Endless</td>
+                        <td>Adaptive</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>PvP</td>
+                        <td>Territory</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Slither.io</strong></td>
+                        <td><span class="badge type-io">IO</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Snake</td>
+                        <td>Neon</td>
+                        <td>5-10</td>
+                        <td>Endless</td>
+                        <td>Adaptive</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>PvP</td>
+                        <td>Size</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stack</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Height</td>
+                        <td>None</td>
+                        <td>2 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Crossy Road</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Urban</td>
+                        <td>Voxel</td>
+                        <td>2-4</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Hybrid</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Distance</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Flappy Bird</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Nature</td>
+                        <td>Pixel</td>
+                        <td>1-2</td>
+                        <td>Endless</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>2 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2048</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Numbers</td>
+                        <td>Minimalist</td>
+                        <td>5-15</td>
+                        <td>Score</td>
+                        <td>Exponential</td>
+                        <td>Ads</td>
+                        <td>Grid full</td>
+                        <td>Leaderboard</td>
+                        <td>Tile value</td>
+                        <td>None</td>
+                        <td>20 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hole.io</strong></td>
+                        <td><span class="badge type-io">IO</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Urban</td>
+                        <td>Low-poly 3D</td>
+                        <td>2-3</td>
+                        <td>Timed</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Timer</td>
+                        <td>PvP</td>
+                        <td>Size</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Color Switch</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Abstract</td>
+                        <td>Neon</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Exponential</td>
+                        <td>Hybrid</td>
+                        <td>Instant</td>
+                        <td>Leaderboard</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Jelly Jump</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Abstract</td>
+                        <td>Cartoon</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>None</td>
+                        <td>Height</td>
+                        <td>None</td>
+                        <td>2 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ballz</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>3-5</td>
+                        <td>Levels</td>
+                        <td>Exponential</td>
+                        <td>Ads</td>
+                        <td>Blocks down</td>
+                        <td>Leaderboard</td>
+                        <td>Level</td>
+                        <td>Ghost hands</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rise Up</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>None</td>
+                        <td>Height</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Idle Miner Tycoon</strong></td>
+                        <td><span class="badge type-idle">Idle</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Mining</td>
+                        <td>Cartoon</td>
+                        <td>5-20</td>
+                        <td>Endless</td>
+                        <td>Exponential</td>
+                        <td>Hybrid</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Money</td>
+                        <td>Tutorial</td>
+                        <td>30 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Crowd City</strong></td>
+                        <td><span class="badge type-io">IO</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Urban</td>
+                        <td>Low-poly</td>
+                        <td>2-3</td>
+                        <td>Timed</td>
+                        <td>Adaptive</td>
+                        <td>Ads</td>
+                        <td>Timer</td>
+                        <td>PvP</td>
+                        <td>Crowd size</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Knife Hit</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Weapons</td>
+                        <td>Cartoon</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Ads</td>
+                        <td>Instant</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bottle Flip 3D</strong></td>
+                        <td><span class="badge type-physics">Physics</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Objects</td>
+                        <td>3D Realistic</td>
+                        <td>2-4</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Ads</td>
+                        <td>Fall</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Ghost hands</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Snake VS Block</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Abstract</td>
+                        <td>Neon</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Length zero</td>
+                        <td>Leaderboard</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Archero</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Fantasy</td>
+                        <td>Cartoon</td>
+                        <td>5-10</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Hybrid</td>
+                        <td>Health</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Tutorial</td>
+                        <td>15 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Spiral Roll</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Objects</td>
+                        <td>3D Cartoon</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Restart</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Ghost hands</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Aquapark.io</strong></td>
+                        <td><span class="badge type-io">IO</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Water Park</td>
+                        <td>3D Cartoon</td>
+                        <td>1-2</td>
+                        <td>Races</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Race end</td>
+                        <td>PvP</td>
+                        <td>Position</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Join Clash</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Battle</td>
+                        <td>Low-poly</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Army zero</td>
+                        <td>None</td>
+                        <td>Army size</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tower Defense King</strong></td>
+                        <td><span class="badge type-tower">Tower</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Fantasy</td>
+                        <td>Cartoon</td>
+                        <td>5-10</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Hybrid</td>
+                        <td>Lives</td>
+                        <td>None</td>
+                        <td>Stars</td>
+                        <td>Tutorial</td>
+                        <td>30 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Merge Dragons!</strong></td>
+                        <td><span class="badge type-merge">Merge</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Fantasy</td>
+                        <td>Cartoon</td>
+                        <td>10-20</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Hybrid</td>
+                        <td>Moves</td>
+                        <td>None</td>
+                        <td>Dragons</td>
+                        <td>Tutorial</td>
+                        <td>60 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Woodturning 3D</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Crafting</td>
+                        <td>3D Realistic</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Accuracy</td>
+                        <td>Ghost hands</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMAZE!!!</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bricks Breaker Quest</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Abstract</td>
+                        <td>Neon</td>
+                        <td>5-10</td>
+                        <td>Levels</td>
+                        <td>Exponential</td>
+                        <td>Ads</td>
+                        <td>Balls lost</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Tutorial</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tiles Hop</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Music</td>
+                        <td>Neon 3D</td>
+                        <td>2-3</td>
+                        <td>Songs</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Miss tile</td>
+                        <td>None</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Magic Tiles 3</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Music</td>
+                        <td>Minimalist</td>
+                        <td>2-3</td>
+                        <td>Songs</td>
+                        <td>Progressive</td>
+                        <td>Hybrid</td>
+                        <td>Miss tap</td>
+                        <td>Leaderboard</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Brain Test</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Comedy</td>
+                        <td>Cartoon</td>
+                        <td>2-5</td>
+                        <td>Levels</td>
+                        <td>Random</td>
+                        <td>Ads</td>
+                        <td>Hints</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Hints</td>
+                        <td>15 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Draw Climber</strong></td>
+                        <td><span class="badge type-physics">Physics</span></td>
+                        <td><span class="badge control-drag">Draw</span></td>
+                        <td>Racing</td>
+                        <td>3D Cartoon</td>
+                        <td>1-2</td>
+                        <td>Races</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Race end</td>
+                        <td>None</td>
+                        <td>Position</td>
+                        <td>Ghost hands</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Perfect Slices</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Food</td>
+                        <td>3D Cartoon</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Knife hit</td>
+                        <td>None</td>
+                        <td>Stars</td>
+                        <td>Ghost hands</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bounce Masters</strong></td>
+                        <td><span class="badge type-physics">Physics</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Sports</td>
+                        <td>Cartoon</td>
+                        <td>2-3</td>
+                        <td>Endless</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Stop</td>
+                        <td>None</td>
+                        <td>Distance</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fun Race 3D</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Racing</td>
+                        <td>3D Cartoon</td>
+                        <td>1-2</td>
+                        <td>Races</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Race end</td>
+                        <td>PvP</td>
+                        <td>Position</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Shortcut Run</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-tap">Tap+Hold</span></td>
+                        <td>Racing</td>
+                        <td>Low-poly</td>
+                        <td>1-2</td>
+                        <td>Races</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Race end</td>
+                        <td>PvP</td>
+                        <td>Position</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Satisfying Slime</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>ASMR</td>
+                        <td>3D Realistic</td>
+                        <td>2-5</td>
+                        <td>Collection</td>
+                        <td>None</td>
+                        <td>Ads</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Collection</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Water Sort Puzzle</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-tap">Tap</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>3-5</td>
+                        <td>Levels</td>
+                        <td>Exponential</td>
+                        <td>Ads</td>
+                        <td>No moves</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>None</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Block Blast!</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Abstract</td>
+                        <td>Minimalist</td>
+                        <td>5-10</td>
+                        <td>Endless</td>
+                        <td>Exponential</td>
+                        <td>Ads</td>
+                        <td>No space</td>
+                        <td>Leaderboard</td>
+                        <td>Score</td>
+                        <td>None</td>
+                        <td>15 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mob Control</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Battle</td>
+                        <td>Low-poly</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Base lost</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Ghost hands</td>
+                        <td>10 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tall Man Run</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Abstract</td>
+                        <td>Low-poly</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Too short</td>
+                        <td>None</td>
+                        <td>Height</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Count Masters</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Battle</td>
+                        <td>Low-poly</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Army zero</td>
+                        <td>None</td>
+                        <td>Army size</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bridge Race</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Racing</td>
+                        <td>Low-poly</td>
+                        <td>1-2</td>
+                        <td>Races</td>
+                        <td>Static</td>
+                        <td>Ads</td>
+                        <td>Race end</td>
+                        <td>PvP</td>
+                        <td>Position</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Going Balls</strong></td>
+                        <td><span class="badge type-physics">Physics</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Abstract</td>
+                        <td>3D Minimal</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Stepped</td>
+                        <td>Ads</td>
+                        <td>Fall</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>None</td>
+                        <td>3 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>High Heels!</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Fashion</td>
+                        <td>3D Cartoon</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>No heels</td>
+                        <td>None</td>
+                        <td>Height</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Roof Rails</strong></td>
+                        <td><span class="badge type-runner">Runner</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Urban</td>
+                        <td>Low-poly</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Fall</td>
+                        <td>None</td>
+                        <td>Gems</td>
+                        <td>None</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Jelly Shift</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-swipe">Swipe</span></td>
+                        <td>Abstract</td>
+                        <td>3D Minimal</td>
+                        <td>2-3</td>
+                        <td>Levels</td>
+                        <td>Linear</td>
+                        <td>Ads</td>
+                        <td>Collision</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Ghost hands</td>
+                        <td>5 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Phone Case DIY</strong></td>
+                        <td><span class="badge type-arcade">Arcade</span></td>
+                        <td><span class="badge control-drag">Drag</span></td>
+                        <td>Crafting</td>
+                        <td>3D Cartoon</td>
+                        <td>2-3</td>
+                        <td>Orders</td>
+                        <td>None</td>
+                        <td>Ads</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Money</td>
+                        <td>Tutorial</td>
+                        <td>15 sec</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DOP 2</strong></td>
+                        <td><span class="badge type-puzzle">Puzzle</span></td>
+                        <td><span class="badge control-drag">Draw</span></td>
+                        <td>Comedy</td>
+                        <td>Cartoon</td>
+                        <td>1-2</td>
+                        <td>Levels</td>
+                        <td>Random</td>
+                        <td>Ads</td>
+                        <td>Hints</td>
+                        <td>None</td>
+                        <td>Level</td>
+                        <td>Hints</td>
+                        <td>10 sec</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <h2>📈 Key Insights from the Analysis</h2>
+        
+        <div class="variables-grid">
+            <div class="variable-card">
+                <h3>Most Common Mechanics</h3>
+                <p><strong>Tap (38%)</strong> dominates, followed by Swipe (26%) and Drag (24%). Multi-touch is rare (< 5%).</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Optimal Session Length</h3>
+                <p><strong>2-3 minutes (44%)</strong> is the sweet spot. Only 8% of games exceed 10 minutes per session.</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Visual Trends</h3>
+                <p><strong>Low-poly 3D and Minimalist</strong> styles dominate (60% combined) due to performance and clarity.</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Progression Systems</h3>
+                <p><strong>Levels (46%)</strong> slightly edge out Endless (38%), with Hybrid systems growing in popularity.</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Hook Time Critical</h3>
+                <p><strong>5 seconds or less (68%)</strong> - Most successful games engage players within 5 seconds.</p>
+            </div>
+            
+            <div class="variable-card">
+                <h3>Monetization Reality</h3>
+                <p><strong>Ads-only (64%)</strong> still dominates, but Hybrid models show 3x higher ARPU.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
