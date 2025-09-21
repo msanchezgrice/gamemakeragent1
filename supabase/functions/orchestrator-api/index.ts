@@ -1,9 +1,65 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Step tracking functions
+async function createOrUpdateStep(supabaseClient: any, runId: string, phase: string, status: string, input?: any, output?: any, error?: any) {
+  const stepData = {
+    run_id: runId,
+    phase: phase,
+    status: status,
+    started_at: status === 'running' ? new Date().toISOString() : undefined,
+    finished_at: ['done', 'failed'].includes(status) ? new Date().toISOString() : undefined,
+    input: input || null,
+    output: output || null,
+    error: error || null,
+    updated_at: new Date().toISOString()
+  };
+
+  // Try to update existing step first
+  const { data: existingStep } = await supabaseClient
+    .from('orchestrator_steps')
+    .select('id')
+    .eq('run_id', runId)
+    .eq('phase', phase)
+    .single();
+
+  if (existingStep) {
+    // Update existing step
+    const { data, error: updateError } = await supabaseClient
+      .from('orchestrator_steps')
+      .update(stepData)
+      .eq('id', existingStep.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error(`❌ Failed to update step ${phase}:`, updateError);
+    }
+    return data;
+  } else {
+    // Create new step
+    const { data, error: insertError } = await supabaseClient
+      .from('orchestrator_steps')
+      .insert({
+        ...stepData,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error(`❌ Failed to create step ${phase}:`, insertError);
+    }
+    return data;
+  }
+}
+
 // Artifact generation functions
 async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase: string, brief: any) {
   console.log(`🎨 Generating artifacts for ${phase} phase of run ${runId}`)
+  
+  // Create/update step as running
+  await createOrUpdateStep(supabaseClient, runId, phase, 'running', { brief });
   
   try {
     switch (phase) {
@@ -38,8 +94,15 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
         await generateDecisionArtifacts(supabaseClient, runId, brief);
         break;
     }
+    
+    // Mark step as completed
+    await createOrUpdateStep(supabaseClient, runId, phase, 'done', { brief }, { success: true });
+    console.log(`✅ Completed ${phase} phase for run ${runId}`);
+    
   } catch (error) {
     console.error(`❌ Failed to generate artifacts for ${phase}:`, error);
+    // Mark step as failed
+    await createOrUpdateStep(supabaseClient, runId, phase, 'failed', { brief }, null, { message: error.message });
   }
 }
 
@@ -2185,8 +2248,10 @@ serve(async (req) => {
         throw error
       }
 
-      // Generate artifacts for the completed phase
-      await generatePhaseArtifacts(supabaseClient, runId, currentRun.phase, currentRun.brief);
+      // Generate artifacts for the new phase (not the completed one)
+      if (nextPhase !== currentRun.phase) {
+        await generatePhaseArtifacts(supabaseClient, runId, nextPhase, currentRun.brief);
+      }
       
       // Log the advancement
       console.log(`🚀 Run ${runId} advanced from ${currentRun.phase}:${currentRun.status} to ${nextPhase}:${nextStatus}`)
@@ -2262,6 +2327,69 @@ serve(async (req) => {
       )
     }
 
+    if (method === 'POST' && path.match(/^\/runs\/[^\/]+\/force-advance$/)) {
+      // Force advance a stuck run to next phase
+      const runId = path.split('/')[2]
+      
+      console.log(`🔧 Force advancing run ${runId}`)
+
+      // Get current run
+      const { data: currentRun, error: fetchError } = await supabaseClient
+        .from('orchestrator_runs')
+        .select('*')
+        .eq('id', runId)
+        .single()
+
+      if (fetchError) {
+        throw fetchError
+      }
+
+      // Determine next phase
+      const phaseOrder = ['intake', 'market', 'synthesis', 'deconstruct', 'prioritize', 'build', 'qa', 'deploy', 'measure', 'decision']
+      const currentPhaseIndex = phaseOrder.indexOf(currentRun.phase)
+      
+      let nextPhase = currentRun.phase
+      let nextStatus = 'running'
+      
+      if (currentPhaseIndex < phaseOrder.length - 1) {
+        nextPhase = phaseOrder[currentPhaseIndex + 1]
+        nextStatus = 'running'
+      } else {
+        nextStatus = 'done'
+      }
+
+      // Update the run
+      const { data: updatedRun, error: updateError } = await supabaseClient
+        .from('orchestrator_runs')
+        .update({
+          status: nextStatus,
+          phase: nextPhase,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', runId)
+        .select()
+        .single()
+
+      if (updateError) {
+        throw updateError
+      }
+
+      // Generate artifacts for the new phase
+      if (nextPhase !== currentRun.phase) {
+        await generatePhaseArtifacts(supabaseClient, runId, nextPhase, currentRun.brief);
+      }
+
+      console.log(`🚀 Force advanced run ${runId} from ${currentRun.phase} to ${nextPhase}`)
+
+      return new Response(
+        JSON.stringify({ success: true, run: updatedRun, message: `Run advanced from ${currentRun.phase} to ${nextPhase}` }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      )
+    }
+
         if (method === 'POST' && path.match(/^\/runs\/[^\/]+\/force-phase$/)) {
           // Force run a specific phase
           const runId = path.split('/')[2]
@@ -2283,6 +2411,18 @@ serve(async (req) => {
 
           // Generate artifacts for the specified phase
           await generatePhaseArtifacts(supabaseClient, runId, phase, currentRun.brief)
+
+          // If this is a different phase than current, update the run
+          if (phase !== currentRun.phase) {
+            await supabaseClient
+              .from('orchestrator_runs')
+              .update({
+                phase: phase,
+                status: 'running',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', runId);
+          }
 
           return new Response(
             JSON.stringify({ success: true, message: `${phase} phase forced successfully` }),
