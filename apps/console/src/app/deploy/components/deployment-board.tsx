@@ -2,6 +2,7 @@
 
 import type { RunRecord } from '@gametok/schemas';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { 
   Upload, 
   Loader, 
@@ -64,6 +65,7 @@ const COLUMNS: Array<{
 ];
 
 export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
+  const [playingGame, setPlayingGame] = useState<string | null>(null);
   const groupedDeployments = COLUMNS.reduce((acc, column) => {
     acc[column.key] = deployments.filter(d => d.deploymentStatus === column.key);
     return acc;
@@ -100,20 +102,29 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: (columnIndex * 0.1) + (index * 0.05), duration: 0.3 }}
               >
-                <DeploymentCard deployment={deployment} />
+                <DeploymentCard deployment={deployment} onPlayGame={setPlayingGame} />
               </motion.div>
             ))}
           </div>
         </div>
       ))}
+
+      {playingGame && (
+        <GamePlayerModal 
+          deployment={deployments.find(d => d.id === playingGame)!} 
+          onClose={() => setPlayingGame(null)} 
+        />
+      )}
     </div>
   );
 }
 
 function DeploymentCard({ 
-  deployment 
+  deployment,
+  onPlayGame
 }: { 
-  deployment: DeploymentBoardProps['deployments'][0] 
+  deployment: DeploymentBoardProps['deployments'][0];
+  onPlayGame: (id: string) => void;
 }) {
   const variant = deployment.gameVariants[0];
   const prototypeData = deployment.prototypeData as { data?: string; size?: number } | undefined;
@@ -163,10 +174,7 @@ function DeploymentCard({
       <div className="flex items-center gap-2 mt-4">
         {deployment.hasPrototype && (
           <button 
-            onClick={() => {
-              // Open game player modal - we'll implement this
-              console.log('Play prototype for:', deployment.brief.theme);
-            }}
+            onClick={() => onPlayGame(deployment.id)}
             className="px-3 py-2 bg-primary/20 text-primary rounded-lg text-sm font-medium hover:bg-primary/30 transition-colors flex items-center gap-1"
           >
             <Play className="h-3 w-3" />
@@ -197,5 +205,74 @@ function DeploymentCard({
         </button>
       </div>
     </div>
+  );
+}
+
+function GamePlayerModal({ 
+  deployment, 
+  onClose 
+}: { 
+  deployment: DeploymentBoardProps['deployments'][0]; 
+  onClose: () => void; 
+}) {
+  const prototypeHTML = (deployment.prototypeData as { data?: string })?.data || '';
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-surface border border-slate-800 rounded-3xl p-6 w-full max-w-2xl h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="mb-6 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Game Testing</h3>
+            <p className="text-sm text-slate-400 mt-1">{deployment.brief.theme}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="bg-black rounded-2xl overflow-hidden flex-1 min-h-0">
+          {prototypeHTML ? (
+            <iframe
+              srcDoc={prototypeHTML}
+              className="w-full h-full border-0"
+              title={`${deployment.brief.theme} Game`}
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400">
+              <div className="text-center">
+                <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No prototype available</p>
+                <p className="text-sm mt-2">Build phase may not be complete</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mt-6 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/50 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

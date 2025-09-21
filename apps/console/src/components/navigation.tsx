@@ -8,7 +8,8 @@ import {
   Rocket,
   Plus,
   Activity,
-  Search
+  Search,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/qa', label: 'QA', icon: TestTube },
   { href: '/deploy', label: 'Deploy', icon: Rocket },
+  { href: '/analysis', label: 'Analysis', icon: BarChart3 },
   { href: '/runs/new', label: 'New Run', icon: Plus },
   { href: '/logs', label: 'Logs', icon: Activity },
   { href: '/debug', label: 'Debug', icon: Search },

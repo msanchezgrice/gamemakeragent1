@@ -52,11 +52,11 @@ export default function DeployPage() {
   // Only show real deployment data for games that have completed build and QA
   const deployments = deployRuns.length > 0 ? deployRuns.map((run) => ({
     ...run,
-    deploymentStatus: (run.status === 'done' ? 'live' : 
-                     run.phase === 'measure' ? 'uploading' : 'to_upload') as 'to_upload' | 'uploading' | 'live',
+    // For now, all completed prototypes start as "to_upload" since we haven't implemented actual deployment
+    deploymentStatus: (run.phase === 'measure' ? 'uploading' : 'to_upload') as 'to_upload' | 'uploading' | 'live',
     gameVariants: [], // Will be populated when actual games are built
     metadata: {
-      clipcadeId: null, // Will be populated when actually deployed
+      clipcadeId: null, // Will be populated when actually deployed to GameTok/Clipcade feed
       uploadedAt: null
     }
   })) : [];
