@@ -259,32 +259,188 @@ Return ONLY valid JSON with this structure:
 }
 
 async function generateSynthesisArtifacts(supabaseClient: any, runId: string, brief: any) {
-  const synthesisContent = `# Theme Analysis: ${brief.theme}
+  console.log(`🧠 Generating real theme synthesis for ${brief.theme} in ${brief.industry}`);
+  
+  // Get market data from previous phase
+  const { data: marketArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'market')
+    .eq('kind', 'market_scan');
 
-## Key Insights
+  const marketData = marketArtifacts?.[0]?.meta?.data || {};
+  
+  // Real LLM call to Claude for theme synthesis
+  const synthesisPrompt = `You are a creative game design strategist specializing in theme analysis and concept synthesis. Based on market research data, synthesize actionable insights for a ${brief.theme} themed game in the ${brief.industry} industry.
 
-- **Visual Style**: Modern, ${brief.industry === 'education' ? 'educational' : 'engaging'} design
-- **Core Mechanics**: ${brief.theme.includes('space') ? 'Physics-based movement' : 'Simple tap/swipe interactions'}
-- **Target Audience**: ${brief.targetAudience || 'General audience'}
-- **Unique Value Proposition**: Combines ${brief.theme} theming with ${brief.goal}
+Theme: ${brief.theme}
+Industry: ${brief.industry}
+Target Audience: ${brief.targetAudience || 'General'}
+Goal: ${brief.goal}
+Constraints: ${JSON.stringify(brief.constraints || {})}
 
-## Market Positioning
+Market Context:
+${JSON.stringify(marketData, null, 2)}
 
-The ${brief.theme} theme in ${brief.industry} games shows strong potential for:
-1. Immediate visual appeal
-2. Clear gameplay metaphors
-3. Expandable content universe
+Analyze the theme's potential and provide a comprehensive synthesis in JSON format with:
+1. Visual design direction and aesthetic principles
+2. Core gameplay mechanics that align with the theme
+3. Narrative/thematic hooks and player motivation
+4. Technical implementation considerations
+5. Differentiation opportunities vs competitors
+6. Risk assessment and mitigation strategies
+7. Success metrics and KPIs specific to this theme
+8. Monetization alignment with theme
 
-## Recommendations
+Return ONLY valid JSON with this structure:
+{
+  "themeAnalysis": {
+    "visualDirection": {
+      "primaryAesthetic": "string",
+      "colorPalette": ["color1", "color2", "color3"],
+      "artStyle": "string",
+      "iconography": ["element1", "element2"],
+      "moodKeywords": ["mood1", "mood2", "mood3"]
+    },
+    "coreMechanics": {
+      "primaryLoop": "string",
+      "inputMethods": ["input1", "input2"],
+      "progressionSystem": "string",
+      "difficultyScaling": "string",
+      "sessionStructure": "string"
+    },
+    "narrativeHooks": {
+      "playerMotivation": "string",
+      "thematicElements": ["element1", "element2"],
+      "emotionalJourney": "string",
+      "contextualFraming": "string"
+    },
+    "technicalConsiderations": {
+      "performanceRequirements": "string",
+      "platformOptimizations": ["opt1", "opt2"],
+      "assetRequirements": "string",
+      "scalabilityFactors": ["factor1", "factor2"]
+    },
+    "differentiation": {
+      "uniqueSellingPoints": ["usp1", "usp2", "usp3"],
+      "competitorGaps": ["gap1", "gap2"],
+      "innovationOpportunities": ["opp1", "opp2"],
+      "themeAdvantages": ["adv1", "adv2"]
+    },
+    "riskAssessment": {
+      "themeRisks": [{"risk": "string", "impact": "high|medium|low", "mitigation": "string"}],
+      "marketRisks": [{"risk": "string", "impact": "high|medium|low", "mitigation": "string"}],
+      "technicalRisks": [{"risk": "string", "impact": "high|medium|low", "mitigation": "string"}]
+    },
+    "successMetrics": {
+      "engagementKPIs": ["kpi1", "kpi2"],
+      "themeSpecificMetrics": ["metric1", "metric2"],
+      "benchmarkTargets": {"metric": "target"},
+      "validationCriteria": ["criteria1", "criteria2"]
+    },
+    "monetizationAlignment": {
+      "themeCompatibleModels": ["model1", "model2"],
+      "naturalPaymentPoints": ["point1", "point2"],
+      "valueProposition": "string",
+      "pricingStrategy": "string"
+    }
+  },
+  "recommendations": {
+    "immediate": ["rec1", "rec2", "rec3"],
+    "shortTerm": ["rec1", "rec2"],
+    "longTerm": ["rec1", "rec2"]
+  },
+  "confidence": 0.85,
+  "reasoning": "Detailed explanation of analysis approach and key insights"
+}`;
 
-1. Focus on immediate feedback loops
-2. Implement progressive difficulty scaling
-3. Add social sharing features for viral growth
-4. Consider seasonal content updates
+  try {
+    // Make LLM call
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || 'test-key',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'user',
+            content: synthesisPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`LLM API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const synthesisData = JSON.parse(result.content[0].text);
+
+    // Log successful analysis
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'synthesis',
+        agent: 'theme-synthesis-agent',
+        level: 'info',
+        message: `Theme synthesis completed for ${brief.theme}`,
+        thinking_trace: synthesisPrompt,
+        llm_response: result.content[0].text,
+        created_at: new Date().toISOString()
+      });
+
+    // Store structured synthesis data
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'synthesis',
+        kind: 'theme_synthesis',
+        path: `runs/${runId}/theme_synthesis.json`,
+        meta: {
+          filename: 'theme_synthesis.json',
+          size: JSON.stringify(synthesisData).length,
+          contentType: 'application/json',
+          data: synthesisData,
+          llm_model: 'claude-3-5-sonnet-20241022',
+          generated_at: new Date().toISOString()
+        }
+      });
+
+    // Also create a markdown summary for human readability
+    const markdownSummary = `# Theme Synthesis: ${brief.theme}
+
+## Visual Direction
+- **Primary Aesthetic**: ${synthesisData.themeAnalysis.visualDirection.primaryAesthetic}
+- **Art Style**: ${synthesisData.themeAnalysis.visualDirection.artStyle}
+- **Color Palette**: ${synthesisData.themeAnalysis.visualDirection.colorPalette.join(', ')}
+- **Mood**: ${synthesisData.themeAnalysis.visualDirection.moodKeywords.join(', ')}
+
+## Core Mechanics
+- **Primary Loop**: ${synthesisData.themeAnalysis.coreMechanics.primaryLoop}
+- **Input Methods**: ${synthesisData.themeAnalysis.coreMechanics.inputMethods.join(', ')}
+- **Progression**: ${synthesisData.themeAnalysis.coreMechanics.progressionSystem}
+
+## Key Differentiators
+${synthesisData.themeAnalysis.differentiation.uniqueSellingPoints.map(usp => `- ${usp}`).join('\n')}
+
+## Immediate Recommendations
+${synthesisData.recommendations.immediate.map(rec => `- ${rec}`).join('\n')}
+
+## Risk Mitigation
+${synthesisData.themeAnalysis.riskAssessment.themeRisks.map(risk => `- **${risk.risk}** (${risk.impact}): ${risk.mitigation}`).join('\n')}
 
 ---
-
-*Generated by SynthesisAgent v2.1*`;
+*Generated by ThemeSynthesisAgent v3.0 | Confidence: ${synthesisData.confidence}*`;
 
   await supabaseClient
     .from('orchestrator_artifacts')
@@ -295,72 +451,229 @@ The ${brief.theme} theme in ${brief.industry} games shows strong potential for:
       path: `runs/${runId}/theme_analysis.md`,
       meta: {
         filename: 'theme_analysis.md',
-        size: synthesisContent.length,
+          size: markdownSummary.length,
         contentType: 'text/markdown',
-        data: synthesisContent
-      }
-    });
+          data: markdownSummary
+        }
+      });
+
+  } catch (error) {
+    console.error(`❌ LLM call failed for theme synthesis:`, error);
+    
+    // Store error in logs
+    await supabaseClient
+      .from('orchestrator_logs')
+      .insert({
+        run_id: runId,
+        phase: 'synthesis',
+        agent: 'theme-synthesis-agent',
+        level: 'error',
+        message: `Theme synthesis failed: ${error.message}`,
+        thinking_trace: synthesisPrompt,
+        llm_response: null,
+        created_at: new Date().toISOString()
+      });
+    
+    // Fallback to structured placeholder
+    const fallbackData = {
+      themeAnalysis: {
+        visualDirection: {
+          primaryAesthetic: `${brief.theme} inspired design`,
+          colorPalette: ['#2563eb', '#7c3aed', '#059669'],
+          artStyle: 'Modern minimalist',
+          iconography: [brief.theme, 'progress indicators'],
+          moodKeywords: ['engaging', 'intuitive', 'rewarding']
+        },
+        coreMechanics: {
+          primaryLoop: `${brief.theme} based interaction cycle`,
+          inputMethods: ['tap', 'swipe'],
+          progressionSystem: 'Level-based advancement',
+          difficultyScaling: 'Adaptive difficulty',
+          sessionStructure: '60-120 second sessions'
+        },
+        differentiation: {
+          uniqueSellingPoints: [`Unique ${brief.theme} mechanics`, 'Intuitive controls', 'Quick sessions'],
+          competitorGaps: ['Better theme integration', 'Smoother progression'],
+          innovationOpportunities: ['Novel interaction patterns', 'Enhanced feedback']
+        }
+      },
+      recommendations: {
+        immediate: ['Focus on core loop', 'Implement basic progression', 'Add feedback systems'],
+        shortTerm: ['Polish visuals', 'Add social features'],
+        longTerm: ['Expand content', 'Add monetization']
+      },
+      confidence: 0.6,
+      reasoning: 'Fallback analysis due to LLM API failure'
+    };
+
+    await supabaseClient
+      .from('orchestrator_artifacts')
+      .insert({
+        run_id: runId,
+        phase: 'synthesis',
+        kind: 'theme_synthesis',
+        path: `runs/${runId}/theme_synthesis.json`,
+        meta: {
+          filename: 'theme_synthesis.json',
+          size: JSON.stringify(fallbackData).length,
+          contentType: 'application/json',
+          data: fallbackData,
+          fallback: true,
+          error: error.message
+        }
+      });
+  }
 }
 
 async function generateBuildArtifacts(supabaseClient: any, runId: string, brief: any) {
-  const buildBrief = `# Build Brief: ${brief.theme}
+  console.log(`🔨 Generating comprehensive build artifacts for ${brief.theme}`);
+  
+  // Get all previous phase data
+  const { data: prioritizeArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'prioritize')
+    .eq('kind', 'priority_matrix');
 
-## Technical Requirements
+  const prioritizeData = prioritizeArtifacts?.[0]?.meta?.data || {};
 
-- **Engine**: Phaser 3.70+
-- **Resolution**: 720x1280 (mobile portrait)
-- **File Size**: <2MB total
-- **Performance**: 60fps target, 30fps minimum
+  // Generate comprehensive build brief and prototype
+  const buildBriefData = {
+    technicalSpecs: {
+      engine: "HTML5 Canvas",
+      targetResolution: "360x640",
+      maxFileSize: "2MB",
+      performanceTargets: { fps: 60, loadTime: 1.5, memoryUsage: "50MB" },
+      compatibility: ["iOS Safari", "Android Chrome"],
+      gameSDKIntegration: {
+        postMessageEvents: ["game:ready", "game:start", "game:end", "game:progress"],
+        telemetryPoints: ["session_start", "level_complete", "game_over"],
+        sessionManagement: "Standard GameTok session lifecycle"
+      }
+    },
+    gameDesign: {
+      coreLoop: `${brief.theme} based gameplay with ${brief.goal} integration`,
+      inputMethods: ["tap", "swipe", "drag"],
+      progressionSystem: "Score-based with level progression",
+      sessionStructure: { 
+        targetDuration: 90, 
+        phases: ["intro", "gameplay", "results"],
+        endConditions: ["time_limit", "score_target", "user_quit"]
+      }
+    },
+    visualDesign: {
+      artStyle: brief.industry === 'education' ? 'Friendly cartoon' : 'Modern minimalist',
+      colorPalette: brief.theme.includes('space') ? ['#001122', '#4CAF50', '#2196F3'] : ['#667eea', '#764ba2', '#4CAF50'],
+      uiFramework: "Custom HTML5",
+      animations: ["smooth_transitions", "particle_effects"],
+      effects: ["score_popup", "collision_feedback"]
+    }
+  };
 
-## Game Design Document
-
-### Core Loop
-1. Player ${brief.theme.includes('space') ? 'pilots spacecraft' : 'navigates challenges'}
-2. ${brief.goal.includes('teach') ? 'Educational content integrated into gameplay' : 'Score-based progression system'}
-3. Progressive difficulty with ${brief.theme} theming
-4. Achievement unlocks and social sharing
-
-### Art Direction
-- **Color Palette**: ${brief.theme.includes('space') ? 'Deep blues, cosmic purples, bright stars' : 'Vibrant, accessible colors'}
-- **Style**: ${brief.industry === 'education' ? 'Friendly, approachable cartoon style' : 'Modern, sleek design'}
-- **UI/UX**: Intuitive touch controls, clear visual hierarchy
-
-### Success Metrics
-- Session length: 60-180 seconds
-- Replay rate: >40%
-- ${brief.industry === 'education' ? 'Learning objective completion: >80%' : 'Share rate: >5%'}
-
-## Implementation Plan
-
-### Phase 1: Core Mechanics (Week 1)
-- Basic ${brief.theme} environment
-- Core interaction system
-- Score/progress tracking
-
-### Phase 2: Content & Polish (Week 2)
-- Level progression system
-- Visual effects and juice
-- Audio integration
-- Performance optimization
-
----
-
-*Generated by BuildAgent v3.2*`;
-
+  // Store build brief
   await supabaseClient
     .from('orchestrator_artifacts')
     .insert({
       run_id: runId,
       phase: 'build',
       kind: 'build_brief',
-      path: `runs/${runId}/build_brief.md`,
+      path: `runs/${runId}/build_brief.json`,
       meta: {
-        filename: 'build_brief.md',
-        size: buildBrief.length,
-        contentType: 'text/markdown',
-        data: buildBrief
+        filename: 'build_brief.json',
+        size: JSON.stringify(buildBriefData).length,
+        contentType: 'application/json',
+        data: buildBriefData,
+        generated_at: new Date().toISOString()
       }
     });
+
+  // Generate playable prototype
+  await generateGamePrototype(supabaseClient, runId, brief, buildBriefData);
+}
+
+async function generateGamePrototype(supabaseClient: any, runId: string, brief: any, buildBrief: any) {
+  console.log(`🎮 Generating playable prototype for ${brief.theme}`);
+  
+  // Generate HTML5 game prototype compatible with GameTok specs
+  const gameHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${brief.theme} - ${brief.goal}</title>
+    <style>
+        body { margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        #gameContainer { width: 360px; height: 640px; background: #000; border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #gameCanvas { width: 100%; height: 100%; display: block; }
+        .score { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; font-weight: bold; pointer-events: none; z-index: 5; }
+        .start-screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 20; }
+        .start-button { background: #4CAF50; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; margin-top: 20px; }
+        .game-over { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 20; }
+        .restart-button { background: #2196F3; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="360" height="640"></canvas>
+        <div class="score" id="scoreDisplay">Score: 0</div>
+        <div class="start-screen" id="startScreen">
+            <h1>${brief.theme}</h1>
+            <p>${brief.goal}</p>
+            <p>Tap to ${brief.theme.toLowerCase().includes('space') ? 'navigate through space' : 'play'}</p>
+            <button class="start-button" onclick="startGame()">Start Game</button>
+        </div>
+        <div class="game-over" id="gameOverScreen">
+            <h2>Game Over!</h2>
+            <p id="finalScore">Final Score: 0</p>
+            <button class="restart-button" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+    <script>
+        let gameSession = { id: 'session_' + Date.now(), gameId: '${runId}', startTime: null, score: 0, isActive: false };
+        function postToParent(message) { if (window.parent !== window) { window.parent.postMessage(message, '*'); } }
+        let canvas, ctx, gameState = 'start', score = 0, gameObjects = [], lastTime = 0, animationId;
+        class GameObject { constructor(x, y, size, color, speed) { this.x = x; this.y = y; this.size = size; this.color = color; this.speed = speed; } update(deltaTime) { this.y += this.speed * deltaTime; } draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size); } isOffScreen() { return this.y > canvas.height + this.size; } }
+        let player = { x: 180, y: 500, size: 30, color: '#4CAF50', speed: 300 };
+        function init() { canvas = document.getElementById('gameCanvas'); ctx = canvas.getContext('2d'); canvas.addEventListener('touchstart', handleInput, { passive: false }); canvas.addEventListener('touchmove', handleInput, { passive: false }); canvas.addEventListener('mousedown', handleInput); canvas.addEventListener('mousemove', handleInput); postToParent({ type: 'game:ready' }); }
+        function handleInput(e) { e.preventDefault(); if (gameState !== 'playing') return; let rect = canvas.getBoundingClientRect(); let clientX = e.touches ? e.touches[0].clientX : e.clientX; let x = (clientX - rect.left) * (canvas.width / rect.width); player.x = Math.max(player.size/2, Math.min(canvas.width - player.size/2, x)); }
+        function startGame() { gameState = 'playing'; score = 0; gameObjects = []; gameSession.startTime = Date.now(); gameSession.isActive = true; document.getElementById('startScreen').style.display = 'none'; document.getElementById('gameOverScreen').style.display = 'none'; postToParent({ type: 'game:start', gameId: gameSession.gameId, sessionId: gameSession.id }); gameLoop(0); }
+        function restartGame() { startGame(); }
+        function endGame() { gameState = 'gameOver'; gameSession.isActive = false; document.getElementById('finalScore').textContent = 'Final Score: ' + score; document.getElementById('gameOverScreen').style.display = 'flex'; if (animationId) { cancelAnimationFrame(animationId); } postToParent({ type: 'game:end', gameId: gameSession.gameId, sessionId: gameSession.id, reason: 'completed', seconds: (Date.now() - gameSession.startTime) / 1000, score: score }); }
+        function gameLoop(currentTime) { if (gameState !== 'playing') return; let deltaTime = (currentTime - lastTime) / 1000; lastTime = currentTime; if (Math.random() < 0.02) { gameObjects.push(new GameObject(Math.random() * canvas.width, -20, 20 + Math.random() * 20, \`hsl(\${Math.random() * 360}, 70%, 50%)\`, 100 + Math.random() * 200)); } for (let i = gameObjects.length - 1; i >= 0; i--) { gameObjects[i].update(deltaTime); let dx = gameObjects[i].x - player.x; let dy = gameObjects[i].y - player.y; let distance = Math.sqrt(dx * dx + dy * dy); if (distance < (gameObjects[i].size + player.size) / 2) { score += 10; gameObjects.splice(i, 1); continue; } if (gameObjects[i].isOffScreen()) { gameObjects.splice(i, 1); } } let gameTime = (Date.now() - gameSession.startTime) / 1000; if (gameTime > 60 || score >= 500) { endGame(); return; } draw(); document.getElementById('scoreDisplay').textContent = 'Score: ' + score; if (Math.floor(gameTime) % 5 === 0) { postToParent({ type: 'game:progress', gameId: gameSession.gameId, sessionId: gameSession.id, seconds: gameTime, score: score }); } animationId = requestAnimationFrame(gameLoop); }
+        function draw() { ctx.fillStyle = '#001122'; ctx.fillRect(0, 0, canvas.width, canvas.height); for (let i = 0; i < 50; i++) { ctx.fillStyle = 'white'; ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1); } ctx.fillStyle = player.color; ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size); gameObjects.forEach(obj => obj.draw()); }
+        window.addEventListener('load', init);
+        window.addEventListener('message', function(event) { switch(event.data.type) { case 'host:pause': if (animationId) cancelAnimationFrame(animationId); break; case 'host:resume': if (gameState === 'playing') gameLoop(performance.now()); break; case 'host:end': endGame(); break; } });
+    </script>
+</body>
+</html>`;
+
+  // Store the playable prototype
+  await supabaseClient
+    .from('orchestrator_artifacts')
+    .insert({
+      run_id: runId,
+      phase: 'build',
+      kind: 'game_prototype',
+      path: `runs/${runId}/prototype.html`,
+      meta: {
+        filename: 'prototype.html',
+        size: gameHTML.length,
+        contentType: 'text/html',
+        data: gameHTML,
+        playable: true,
+        gameSDKCompliant: true,
+        generated_at: new Date().toISOString(),
+        specifications: {
+          engine: 'HTML5 Canvas',
+          resolution: '360x640',
+          fileSize: Math.round(gameHTML.length / 1024) + 'KB',
+          features: ['touch_controls', 'scoring', 'session_tracking', 'gametok_integration']
+        }
+      }
+    });
+
+  console.log(`✅ Generated playable prototype (${Math.round(gameHTML.length / 1024)}KB)`);
 }
 
 // Placeholder functions for other phases
@@ -729,18 +1042,54 @@ Return ONLY valid JSON with this structure:
 }
 
 async function generatePrioritizeArtifacts(supabaseClient: any, runId: string, brief: any) {
-  console.log(`🎯 Generating prioritize artifacts for ${brief.theme}`);
+  console.log(`🎯 Generating comprehensive prioritization for ${brief.theme}`);
   
-  // Real LLM call to Claude for opportunity prioritization
-  const prioritizePrompt = `You are a product strategy consultant specializing in game development prioritization. Based on market research and game analysis, prioritize opportunities for a ${brief.theme} game in the ${brief.industry} industry.
+  // Get previous phase data
+  const { data: marketArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'market')
+    .eq('kind', 'market_scan');
 
+  const { data: synthesisArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'synthesis')
+    .eq('kind', 'theme_synthesis');
+
+  const { data: deconstructArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'deconstruct')
+    .eq('kind', 'deconstruct_analysis');
+
+  const marketData = marketArtifacts?.[0]?.meta?.data || {};
+  const synthesisData = synthesisArtifacts?.[0]?.meta?.data || {};
+  const deconstructData = deconstructArtifacts?.[0]?.meta?.data || {};
+  
+  // Enhanced LLM call to Claude for comprehensive prioritization
+  const prioritizePrompt = `You are a senior product strategist specializing in mobile game development prioritization. Based on comprehensive market research, theme synthesis, and competitive deconstruction, create a detailed prioritization framework for a ${brief.theme} game in the ${brief.industry} industry.
+
+CONTEXT:
 Theme: ${brief.theme}
 Industry: ${brief.industry}
 Target Audience: ${brief.targetAudience || 'General'}
 Goal: ${brief.goal}
 Constraints: ${JSON.stringify(brief.constraints || {})}
 
-Analyze and prioritize development opportunities. Provide a comprehensive prioritization report in JSON format with:
+MARKET RESEARCH DATA:
+${JSON.stringify(marketData, null, 2)}
+
+THEME SYNTHESIS DATA:
+${JSON.stringify(synthesisData, null, 2)}
+
+COMPETITIVE DECONSTRUCTION:
+${JSON.stringify(deconstructData, null, 2)}
+
+Based on this comprehensive analysis, create a prioritization framework that will directly inform the build phase. Focus on:
 1. Ranked feature opportunities with impact/effort scoring
 2. Development roadmap with phases and timelines
 3. Resource allocation recommendations
@@ -988,13 +1337,47 @@ Return ONLY valid JSON with this structure:
 async function generateQAArtifacts(supabaseClient: any, runId: string, brief: any) {
   console.log(`🧪 Generating QA artifacts for ${brief.theme}`);
   
-  // Real LLM call to Claude for QA testing strategy
-  const qaPrompt = `You are a QA specialist for mobile game testing. Create a comprehensive testing strategy and quality assurance plan for a ${brief.theme} game in the ${brief.industry} industry.
+  // First, check if there's a completed prototype from build phase
+  const { data: prototypeArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'build')
+    .eq('kind', 'game_prototype');
 
+  if (!prototypeArtifacts || prototypeArtifacts.length === 0) {
+    throw new Error('No completed prototype found. QA phase requires a playable prototype from build phase.');
+  }
+
+  const prototype = prototypeArtifacts[0];
+  console.log(`✅ Found prototype: ${prototype.meta.filename} (${prototype.meta.specifications?.fileSize})`);
+
+  // Get build brief for context
+  const { data: buildArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('meta')
+    .eq('run_id', runId)
+    .eq('phase', 'build')
+    .eq('kind', 'build_brief');
+
+  const buildBrief = buildArtifacts?.[0]?.meta?.data || {};
+  
+  // Enhanced QA prompt that includes prototype analysis
+  const qaPrompt = `You are a senior QA specialist for mobile game testing. You have a completed prototype to test for a ${brief.theme} game in the ${brief.industry} industry.
+
+GAME CONTEXT:
 Theme: ${brief.theme}
 Industry: ${brief.industry}
 Target Audience: ${brief.targetAudience || 'General'}
 Goal: ${brief.goal}
+
+PROTOTYPE SPECIFICATIONS:
+${JSON.stringify(prototype.meta.specifications, null, 2)}
+
+BUILD BRIEF:
+${JSON.stringify(buildBrief, null, 2)}
+
+Create a comprehensive QA testing plan specifically for this completed prototype. Focus on:
 
 Develop a complete QA strategy and testing plan. Provide a comprehensive report in JSON format with:
 1. Testing strategy and approach
@@ -2383,9 +2766,9 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, run: updatedRun, message: `Run advanced from ${currentRun.phase} to ${nextPhase}` }),
-        {
+        { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
+          status: 200 
         }
       )
     }
