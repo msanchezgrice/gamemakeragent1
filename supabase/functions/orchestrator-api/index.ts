@@ -150,8 +150,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: marketPrompt
@@ -199,7 +199,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(marketData).length,
           contentType: 'application/json',
           data: marketData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -365,8 +365,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         temperature: 0.7,
         messages: [
           {
@@ -411,7 +411,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(synthesisData).length,
           contentType: 'application/json',
           data: synthesisData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -738,16 +738,15 @@ ${JSON.stringify(buildBrief, null, 2)}
 
 CRITICAL REQUIREMENTS:
 1. Create a UNIQUE game that matches the theme and mechanics from the analysis
-2. DO NOT create generic falling blocks, tetris-like, or space shooter games
-3. Design gameplay mechanics that are SPECIFICALLY tailored to the theme (${brief.theme})
-4. Use HTML5 Canvas with mobile-first design (360x640)
-5. Include proper GameTok SDK integration via postMessage
-6. Make it actually playable with theme-appropriate mechanics and visuals
-7. Use the specified color palette and visual style from theme analysis
-8. Implement the core mechanics and input methods from the theme analysis
-9. Create game objects, interactions, and goals that relate directly to the theme
-10. Ensure proper HTML formatting - NO markdown code blocks, NO backticks
-11. Return clean, properly formatted HTML that can be directly executed
+2. Design gameplay mechanics that are SPECIFICALLY tailored to the theme (${brief.theme})
+3. Use HTML5 Canvas with mobile-first design (360x640)
+4. Include proper GameTok SDK integration via postMessage
+5. Make it actually playable with theme-appropriate mechanics and visuals
+6. Use the specified color palette and visual style from theme analysis
+7. Implement the core mechanics and input methods from the theme analysis
+8. Create game objects, interactions, and goals that relate directly to the theme
+9. Ensure proper HTML formatting - NO markdown code blocks, NO backticks
+10. Return clean, properly formatted HTML that can be directly executed
 
 THEME-SPECIFIC DESIGN REQUIREMENTS:
 - If theme is "Temple runner": Create running/dodging mechanics with temple aesthetics
@@ -783,8 +782,8 @@ Return a complete, properly formatted HTML file that creates a unique game based
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 8000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [
           {
             role: 'user',
@@ -962,8 +961,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: intakePrompt
@@ -1011,7 +1010,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(intakeData).length,
           contentType: 'application/json',
           data: intakeData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -1144,8 +1143,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2500,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: deconstructPrompt
@@ -1193,7 +1192,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(deconstructData).length,
           contentType: 'application/json',
           data: deconstructData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -1418,8 +1417,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 3000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: prioritizePrompt
@@ -1467,7 +1466,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(prioritizeData).length,
           contentType: 'application/json',
           data: prioritizeData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -1705,8 +1704,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 3000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: qaPrompt
@@ -1754,7 +1753,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(qaData).length,
           contentType: 'application/json',
           data: qaData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -2021,8 +2020,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022', // Enhanced with gameplay simulation
-        max_tokens: 6000, // Increased for comprehensive analysis
+        model: 'claude-opus-4-1-20250805', // Enhanced with gameplay simulation
+        max_tokens: 30000, // Increased for comprehensive analysis
         temperature: 0.1, // Lower temperature for more focused analysis
         messages: [{
           role: 'user',
@@ -2072,7 +2071,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(analysisData).length,
           contentType: 'application/json',
           data: analysisData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString(),
           bugsFound: analysisData.bugReport?.length || 0,
           qualityScore: analysisData.qualityScore?.overall || 0
@@ -2264,8 +2263,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 3000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: deployPrompt
@@ -2313,7 +2312,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(deployData).length,
           contentType: 'application/json',
           data: deployData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -2539,8 +2538,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 3000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: measurePrompt
@@ -2588,7 +2587,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(measureData).length,
           contentType: 'application/json',
           data: measureData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
@@ -2862,8 +2861,8 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 30000,
         messages: [{
           role: 'user',
           content: decisionPrompt
@@ -2911,7 +2910,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(decisionData).length,
           contentType: 'application/json',
           data: decisionData,
-          llm_model: 'claude-3-5-sonnet-20241022',
+          llm_model: 'claude-opus-4-1-20250805',
           generated_at: new Date().toISOString()
         }
       });
