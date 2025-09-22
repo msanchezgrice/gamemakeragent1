@@ -379,17 +379,17 @@ function GamePlayerModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-surface border border-slate-800 rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-hidden"
+        className="bg-surface border border-slate-800 rounded-3xl p-6 w-full max-w-2xl h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="mb-6 flex items-center justify-between">
+        <header className="mb-6 flex items-center justify-between flex-shrink-0">
           <div>
             <h3 className="text-lg font-semibold text-white">Game Testing</h3>
             <p className="text-sm text-slate-400 mt-1">{run.brief.theme}</p>
@@ -402,7 +402,7 @@ function GamePlayerModal({
           </button>
         </header>
 
-        <div className="bg-black rounded-2xl overflow-hidden mb-4" style={{ aspectRatio: '9/16', height: '500px' }}>
+        <div className="bg-black rounded-2xl overflow-hidden flex-1 min-h-0">
           {prototypeHTML ? (
             <iframe
               srcDoc={prototypeHTML}
@@ -421,18 +421,12 @@ function GamePlayerModal({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mt-6 flex-shrink-0">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/50 transition-colors"
           >
             Close
-          </button>
-          <button 
-            onClick={() => window.open(`/runs/${run.id}`, '_blank')}
-            className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            View Details
           </button>
         </div>
       </motion.div>

@@ -3142,6 +3142,15 @@ serve(async (req) => {
         if (!updateError) {
           processedRuns.push(updatedRun)
           console.log(`✅ Started run ${run.id} - now running in ${run.phase} phase`)
+          
+          // CRITICAL FIX: Generate artifacts for the current phase when starting
+          try {
+            console.log(`🎨 Auto-processing: Generating artifacts for ${run.phase} phase...`)
+            await generatePhaseArtifacts(supabaseClient, run.id, run.phase)
+            console.log(`✅ Auto-processing: Generated artifacts for ${run.phase} phase`)
+          } catch (artifactError) {
+            console.error(`❌ Auto-processing: Failed to generate artifacts for ${run.phase}:`, artifactError)
+          }
         }
       }
       
@@ -3198,6 +3207,15 @@ serve(async (req) => {
           if (!updateError) {
             processedRuns.push(updatedRun)
             console.log(`🤖 Auto-advanced run ${run.id} from ${run.phase} to ${nextPhase} (${nextStatus})`)
+            
+            // CRITICAL FIX: Generate artifacts for the new phase
+            try {
+              console.log(`🎨 Auto-processing: Generating artifacts for ${nextPhase} phase...`)
+              await generatePhaseArtifacts(supabaseClient, run.id, nextPhase)
+              console.log(`✅ Auto-processing: Generated artifacts for ${nextPhase} phase`)
+            } catch (artifactError) {
+              console.error(`❌ Auto-processing: Failed to generate artifacts for ${nextPhase}:`, artifactError)
+            }
           }
         }
       }
