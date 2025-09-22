@@ -528,15 +528,14 @@ function GamePlayerModal({
   run: QATableProps['runs'][0]; 
   onClose: () => void; 
 }) {
-  // Get prototype HTML from run data (this will need to be fetched from the API)
-  const prototypeHTML = run.prototypeData?.data || '';
+  const prototypeHTML = (run.prototypeData as { data?: string })?.data || '';
   
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] p-4"
       onClick={onClose}
     >
       <motion.div
@@ -584,9 +583,6 @@ function GamePlayerModal({
             className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/50 transition-colors"
           >
             Close
-          </button>
-          <button className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors">
-            Pass QA
           </button>
         </div>
       </motion.div>

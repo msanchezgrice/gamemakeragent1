@@ -9,31 +9,40 @@ import type { RunRecord } from '@gametok/schemas';
 export default function DashboardPage() {
   const [runs, setRuns] = useState<Array<RunRecord & { metrics?: { progress?: number; playRate?: number; likability?: number } }>>([]);
   const [loading, setLoading] = useState(true);
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
-  const fetchRuns = async () => {
-    console.log('🏠 Dashboard: Loading runs...');
-    setLoading(true);
+  const fetchRuns = async (isBackgroundRefresh = false) => {
+    console.log('🏠 Dashboard: Loading runs...', isBackgroundRefresh ? '(background)' : '(initial)');
+    
+    if (isBackgroundRefresh) {
+      setBackgroundRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      // Trigger auto-processing first
-      try {
-        console.log('🤖 Dashboard: Triggering auto-processing...');
-        const processResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/process-runs`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
+      // Trigger auto-processing first (only for background refreshes to avoid blocking initial load)
+      if (isBackgroundRefresh) {
+        try {
+          console.log('🤖 Dashboard: Triggering auto-processing...');
+          const processResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/process-runs`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (processResponse.ok) {
+            const result = await processResponse.json();
+            console.log('✅ Dashboard: Auto-processing result:', result);
+          } else {
+            console.warn('⚠️ Dashboard: Auto-processing failed:', processResponse.status);
           }
-        });
-        
-        if (processResponse.ok) {
-          const result = await processResponse.json();
-          console.log('✅ Dashboard: Auto-processing result:', result);
-        } else {
-          console.warn('⚠️ Dashboard: Auto-processing failed:', processResponse.status);
+        } catch (processError) {
+          console.warn('⚠️ Dashboard: Auto-processing error:', processError);
         }
-      } catch (processError) {
-        console.warn('⚠️ Dashboard: Auto-processing error:', processError);
       }
 
       const fetchedRuns = await loadRuns();
@@ -45,17 +54,21 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('❌ Dashboard: Failed to load runs:', error);
     } finally {
-      setLoading(false);
+      if (isBackgroundRefresh) {
+        setBackgroundRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchRuns();
+    fetchRuns(false); // Initial load
   }, []);
 
-  // Auto-refresh every 10 seconds for more responsive updates
+  // Auto-refresh every 30 seconds for more responsive updates (background only)
   useEffect(() => {
-    const interval = setInterval(fetchRuns, 10000);
+    const interval = setInterval(() => fetchRuns(true), 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -75,14 +88,15 @@ export default function DashboardPage() {
     <div>
       <div className="mx-auto max-w-7xl px-8 pt-4">
         <button
-          onClick={fetchRuns}
-          disabled={loading}
+          onClick={() => fetchRuns(false)}
+          disabled={loading || backgroundRefreshing}
           className="mb-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {loading ? 'Refreshing...' : 'Refresh Data'}
+          {loading ? 'Refreshing...' : backgroundRefreshing ? 'Updating...' : 'Refresh Data'}
         </button>
         <div className="text-xs text-slate-400">
           Last refresh: {new Date(lastRefresh).toLocaleTimeString()} | Runs in state: {runs.length}
+          {backgroundRefreshing && <span className="ml-2 text-primary">• Auto-updating...</span>}
         </div>
       </div>
       <DashboardWithFilters runs={runs} />
