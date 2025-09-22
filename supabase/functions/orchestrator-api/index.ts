@@ -1707,10 +1707,20 @@ async function generateQACodeAnalysis(supabaseClient: any, runId: string, brief:
   const prototypeCode = prototype.meta.data;
   const gameSpecs = prototype.meta.specifications || {};
   
-  // Enhanced QA code analysis prompt
-  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game code analysis. Analyze the following game prototype code for potential bugs, performance issues, and quality concerns.
+  // Create a temporary hosted URL for the game (for web browsing agents)
+  const gameUrl = `data:text/html;base64,${btoa(prototypeCode)}`;
+  
+  // Enhanced QA code analysis prompt with web browsing simulation
+  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game testing and code analysis. You have both code review and gameplay testing capabilities.
 
-GAME CONTEXT:
+TESTING APPROACH:
+1. **CODE ANALYSIS**: Review the source code for bugs and issues
+2. **GAMEPLAY SIMULATION**: Mentally simulate playing the game based on the code
+3. **MOBILE TESTING**: Analyze touch controls and mobile compatibility
+4. **PERFORMANCE REVIEW**: Check for optimization opportunities
+
+GAME TO TEST:
+Game URL (for reference): ${gameUrl}
 Theme: ${brief.theme}
 Industry: ${brief.industry}
 Target Audience: ${brief.targetAudience || 'General'}
@@ -1725,7 +1735,47 @@ PROTOTYPE CODE TO ANALYZE:
 ${prototypeCode}
 \`\`\`
 
-Perform a comprehensive code analysis and identify:
+COMPREHENSIVE QA ANALYSIS REQUIRED:
+
+**STEP 1: CODE REVIEW**
+- Analyze the HTML, CSS, and JavaScript for bugs
+- Check game logic, event handling, and state management
+- Review performance optimizations and mobile compatibility
+
+**STEP 2: GAMEPLAY SIMULATION**
+- Mentally simulate the game flow based on the code
+- Identify potential gameplay issues and user experience problems
+- Check if the game matches the theme and brief requirements
+
+**STEP 3: MOBILE TESTING SIMULATION**
+- Analyze touch event handling and mobile responsiveness
+- Check for proper preventDefault calls and gesture support
+- Verify mobile-first design implementation
+
+**STEP 4: BUG IDENTIFICATION**
+Identify specific bugs with:
+- Exact location in code (line numbers if possible)
+- Severity level (Critical/High/Medium/Low)
+- Impact on gameplay and user experience
+- Recommended fixes with code examples
+
+**STEP 5: GAMEPLAY VALIDATION**
+Based on code analysis, determine if:
+- Game mechanics work as intended
+- Theme is properly implemented
+- Controls are responsive and intuitive
+- Game is actually playable and engaging
+
+**STEP 6: WEB BROWSING SIMULATION**
+Simulate actually playing the game by:
+- Following the game flow from start screen to gameplay
+- Testing touch interactions and controls
+- Checking if animations and transitions work smoothly
+- Verifying score tracking and game over conditions
+- Testing mobile responsiveness and orientation
+
+**STEP 7: COMPREHENSIVE BUG REPORT**
+Provide detailed analysis covering:
 
 1. **FUNCTIONAL BUGS**: Logic errors, broken game mechanics, incorrect implementations
 2. **PERFORMANCE ISSUES**: Memory leaks, inefficient algorithms, rendering bottlenecks
@@ -1812,8 +1862,9 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
+        model: 'claude-3-5-sonnet-20241022', // Enhanced with gameplay simulation
+        max_tokens: 6000, // Increased for comprehensive analysis
+        temperature: 0.1, // Lower temperature for more focused analysis
         messages: [{
           role: 'user',
           content: codeAnalysisPrompt

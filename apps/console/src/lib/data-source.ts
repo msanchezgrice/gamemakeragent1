@@ -177,6 +177,8 @@ export async function createRun(brief: {
   goal: string;
   theme: string;
   targetAudience?: string;
+  gameType?: string;
+  controlType?: string;
   constraints: Record<string, unknown>;
 }) {
   console.log('🔥 =================================');
