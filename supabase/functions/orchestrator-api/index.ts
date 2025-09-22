@@ -1,6 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Helper function to extract JSON from LLM response (removes markdown code blocks)
+function extractJsonFromLLMResponse(text: string): string {
+  // Remove markdown code blocks if present
+  let cleanText = text.trim();
+  
+  // Remove ```json and ``` markers
+  if (cleanText.startsWith('```json')) {
+    cleanText = cleanText.replace(/^```json\s*/, '');
+  }
+  if (cleanText.startsWith('```')) {
+    cleanText = cleanText.replace(/^```\s*/, '');
+  }
+  if (cleanText.endsWith('```')) {
+    cleanText = cleanText.replace(/\s*```$/, '');
+  }
+  
+  // Remove any leading/trailing whitespace
+  cleanText = cleanText.trim();
+  
+  return cleanText;
+}
+
 // Helper function for LLM API calls with timeout handling
 async function callLLMWithTimeout(model: string, messages: any[], tools?: any[], temperature?: number, timeoutMs: number = 300000, maxTokens?: number) {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -234,8 +256,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: marketPrompt
+          role: 'user',
+          content: marketPrompt
       }],
       webSearchTools, // web search for real-time market data
       undefined, // default temperature
@@ -244,8 +266,9 @@ Return ONLY valid JSON with this structure:
     );
     const marketDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const marketData = JSON.parse(marketDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(marketDataText);
+    const marketData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated real market data:`, marketData);
 
@@ -424,7 +447,9 @@ Return ONLY valid JSON with this structure:
       300000, // 5 minute timeout
       30000 // explicit max_tokens
     );
-    const synthesisData = JSON.parse(llmResult.content[0].text);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(llmResult.content[0].text);
+    const synthesisData = JSON.parse(cleanJson);
 
     // Log successful analysis
     await supabaseClient
@@ -967,8 +992,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: intakePrompt
+          role: 'user',
+          content: intakePrompt
       }],
       undefined, // no tools for intake
       undefined, // default temperature
@@ -977,8 +1002,9 @@ Return ONLY valid JSON with this structure:
     );
     const intakeDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const intakeData = JSON.parse(intakeDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(intakeDataText);
+    const intakeData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated intake analysis:`, intakeData);
 
@@ -1096,8 +1122,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: deconstructPrompt
+          role: 'user',
+          content: deconstructPrompt
       }],
       undefined, // no tools for deconstruct
       undefined, // default temperature
@@ -1106,8 +1132,9 @@ Return ONLY valid JSON with this structure:
     );
     const deconstructDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const deconstructData = JSON.parse(deconstructDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(deconstructDataText);
+    const deconstructData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated deconstruct analysis:`, deconstructData);
 
@@ -1357,8 +1384,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: prioritizePrompt
+          role: 'user',
+          content: prioritizePrompt
       }],
       undefined, // no tools for prioritize
       undefined, // default temperature
@@ -1367,8 +1394,9 @@ Return ONLY valid JSON with this structure:
     );
     const prioritizeDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const prioritizeData = JSON.parse(prioritizeDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(prioritizeDataText);
+    const prioritizeData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated prioritization analysis:`, prioritizeData);
 
@@ -1631,8 +1659,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: qaPrompt
+          role: 'user',
+          content: qaPrompt
       }],
       undefined, // no tools for QA strategy
       undefined, // default temperature
@@ -1641,8 +1669,9 @@ Return ONLY valid JSON with this structure:
     );
     const qaDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const qaData = JSON.parse(qaDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(qaDataText);
+    const qaData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated QA strategy:`, qaData);
 
@@ -1968,8 +1997,9 @@ Return ONLY valid JSON with this structure:
     const llmResult = await response.json();
     const analysisText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const analysisData = JSON.parse(analysisText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(analysisText);
+    const analysisData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated code analysis with ${analysisData.bugReport?.length || 0} issues found`);
 
@@ -2187,8 +2217,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: deployPrompt
+          role: 'user',
+          content: deployPrompt
       }],
       undefined, // no tools for deploy
       undefined, // default temperature
@@ -2197,8 +2227,9 @@ Return ONLY valid JSON with this structure:
     );
     const deployDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const deployData = JSON.parse(deployDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(deployDataText);
+    const deployData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated deployment strategy:`, deployData);
 
@@ -2449,8 +2480,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: measurePrompt
+          role: 'user',
+          content: measurePrompt
       }],
       undefined, // no tools for measure
       undefined, // default temperature
@@ -2459,8 +2490,9 @@ Return ONLY valid JSON with this structure:
     );
     const measureDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const measureData = JSON.parse(measureDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(measureDataText);
+    const measureData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated measurement strategy:`, measureData);
 
@@ -2759,8 +2791,8 @@ Return ONLY valid JSON with this structure:
     const llmResult = await callLLMWithTimeout(
       'claude-sonnet-4-20250514',
       [{
-        role: 'user',
-        content: decisionPrompt
+          role: 'user',
+          content: decisionPrompt
       }],
       undefined, // no tools for decision
       undefined, // default temperature
@@ -2769,8 +2801,9 @@ Return ONLY valid JSON with this structure:
     );
     const decisionDataText = llmResult.content[0].text;
     
-    // Parse the JSON response
-    const decisionData = JSON.parse(decisionDataText);
+    // Extract clean JSON and parse
+    const cleanJson = extractJsonFromLLMResponse(decisionDataText);
+    const decisionData = JSON.parse(cleanJson);
     
     console.log(`✅ Generated strategic decision analysis:`, decisionData);
 
