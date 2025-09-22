@@ -528,18 +528,42 @@ ${synthesisData.themeAnalysis.riskAssessment.themeRisks.map(risk => `- **${risk.
 async function generateBuildArtifacts(supabaseClient: any, runId: string, brief: any) {
   console.log(`🔨 Generating comprehensive build artifacts for ${brief.theme}`);
   
-  // Get all previous phase data
-  const { data: prioritizeArtifacts } = await supabaseClient
+  // Get ALL previous phase data for comprehensive context
+  const { data: artifacts, error: artifactsError } = await supabaseClient
     .from('orchestrator_artifacts')
-    .select('meta')
+    .select('kind, meta')
     .eq('run_id', runId)
-    .eq('phase', 'prioritize')
-    .eq('kind', 'priority_matrix');
+    .in('kind', ['market_scan', 'theme_synthesis', 'priority_matrix']);
 
-  const prioritizeData = prioritizeArtifacts?.[0]?.meta?.data || {};
+  if (artifactsError) {
+    console.error('❌ Failed to fetch artifacts for build brief:', artifactsError);
+  }
 
-  // Generate comprehensive build brief and prototype
+  const marketData = artifacts?.find(a => a.kind === 'market_scan')?.meta?.data || {};
+  const themeData = artifacts?.find(a => a.kind === 'theme_synthesis')?.meta?.data || {};
+  const priorityData = artifacts?.find(a => a.kind === 'priority_matrix')?.meta?.data || {};
+
+  console.log(`🎨 Using artifacts for build brief:`, {
+    market: !!marketData.trends,
+    theme: !!themeData.themeAnalysis,
+    priority: !!priorityData.prioritizedFeatures,
+    intake: { gameType: brief.gameType, controlType: brief.controlType }
+  });
+
+  // Extract prioritized features and mechanics from artifacts
+  const prioritizedFeatures = priorityData.prioritizedFeatures || [];
+  const coreMechanics = themeData.themeAnalysis?.coreMechanics || {};
+  const visualDirection = themeData.themeAnalysis?.visualDirection || {};
+  const marketInsights = marketData.insights || {};
+
+  // Generate comprehensive build brief using ALL context
   const buildBriefData = {
+    projectContext: {
+      originalBrief: brief,
+      marketInsights: marketInsights,
+      themeAnalysis: themeData.themeAnalysis,
+      prioritizedFeatures: prioritizedFeatures
+    },
     technicalSpecs: {
       engine: "HTML5 Canvas",
       targetResolution: "360x640",
@@ -553,22 +577,36 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
       }
     },
     gameDesign: {
-      coreLoop: `${brief.theme} based gameplay with ${brief.goal} integration`,
-      inputMethods: ["tap", "swipe", "drag"],
-      progressionSystem: "Score-based with level progression",
+      coreLoop: coreMechanics.primaryLoop || `${brief.theme} based gameplay with ${brief.goal} integration`,
+      inputMethods: brief.controlType ? [brief.controlType.toLowerCase()] : coreMechanics.inputMethods || ["tap", "swipe", "drag"],
+      gameType: brief.gameType || 'casual',
+      controlType: brief.controlType || 'touch',
+      progressionSystem: coreMechanics.progressionSystem || "Score-based with level progression",
       sessionStructure: { 
-        targetDuration: 90, 
+        targetDuration: coreMechanics.sessionLength || 90, 
         phases: ["intro", "gameplay", "results"],
         endConditions: ["time_limit", "score_target", "user_quit"]
+      },
+      mechanics: {
+        primary: coreMechanics.primaryMechanic || 'tap-based',
+        secondary: coreMechanics.secondaryMechanics || [],
+        difficulty: coreMechanics.difficultyProgression || 'gradual'
       }
     },
     visualDesign: {
-      artStyle: brief.industry === 'education' ? 'Friendly cartoon' : 'Modern minimalist',
-      colorPalette: brief.theme.includes('space') ? ['#001122', '#4CAF50', '#2196F3'] : ['#667eea', '#764ba2', '#4CAF50'],
+      artStyle: visualDirection.artStyle || (brief.industry === 'education' ? 'Friendly cartoon' : 'Modern minimalist'),
+      colorPalette: visualDirection.colorPalette || (brief.theme.includes('space') ? ['#001122', '#4CAF50', '#2196F3'] : ['#667eea', '#764ba2', '#4CAF50']),
       uiFramework: "Custom HTML5",
-      animations: ["smooth_transitions", "particle_effects"],
-      effects: ["score_popup", "collision_feedback"]
-    }
+      animations: visualDirection.animations || ["smooth_transitions", "particle_effects"],
+      effects: visualDirection.effects || ["score_popup", "collision_feedback"],
+      theme: visualDirection.themeElements || {}
+    },
+    featureImplementation: prioritizedFeatures.map(feature => ({
+      name: feature.name || feature,
+      priority: feature.priority || 'medium',
+      implementation: feature.implementation || 'standard',
+      effort: feature.effort || 'medium'
+    }))
   };
 
   // Store build brief
@@ -624,27 +662,42 @@ GAME BRIEF:
 - Goal: ${brief.goal}
 - Industry: ${brief.industry}
 - Target Audience: ${brief.targetAudience}
+- Game Type: ${brief.gameType || 'casual'}
+- Control Type: ${brief.controlType || 'touch'}
 
 MARKET RESEARCH:
-${marketData.insights || 'Focus on engaging, simple mechanics'}
+${JSON.stringify(marketData.insights || {}, null, 2)}
 
 THEME ANALYSIS:
 - Core Mechanics: ${themeData.themeAnalysis?.coreMechanics?.primaryLoop || 'Tap-based interaction'}
 - Visual Style: ${themeData.themeAnalysis?.visualDirection?.artStyle || 'Modern minimalist'}
 - Color Palette: ${themeData.themeAnalysis?.visualDirection?.colorPalette?.join(', ') || '#4CAF50, #2196F3, #FF5722'}
+- Input Methods: ${themeData.themeAnalysis?.coreMechanics?.inputMethods?.join(', ') || 'tap, swipe'}
 
-BUILD BRIEF:
+PRIORITIZED FEATURES:
+${priorityData.prioritizedFeatures?.map(f => `- ${f.name || f}: ${f.priority || 'medium'} priority`).join('\n') || '- Core gameplay mechanics\n- Score system\n- Mobile optimization'}
+
+BUILD BRIEF CONTEXT:
 ${JSON.stringify(buildBrief, null, 2)}
 
-REQUIREMENTS:
-1. Create a UNIQUE game that matches the theme and mechanics
+CRITICAL REQUIREMENTS:
+1. Create a UNIQUE game that matches the theme and mechanics from the analysis
 2. Use HTML5 Canvas with mobile-first design (360x640)
-3. Include proper GameTok SDK integration
+3. Include proper GameTok SDK integration via postMessage
 4. Make it actually playable with theme-appropriate mechanics
-5. Use the specified color palette and visual style
-6. Implement the core mechanics from the theme analysis
+5. Use the specified color palette and visual style from theme analysis
+6. Implement the core mechanics and input methods from the theme analysis
+7. Ensure proper HTML formatting - NO markdown code blocks, NO backticks
+8. Return clean, properly formatted HTML that can be directly executed
 
-Return ONLY a complete HTML file with embedded CSS and JavaScript. Make the game unique and engaging based on the theme.`;
+FORMATTING REQUIREMENTS:
+- Return ONLY the HTML content
+- NO markdown formatting (no \`\`\`html or \`\`\`)
+- NO explanatory text before or after the HTML
+- Ensure proper HTML structure with DOCTYPE, head, body
+- All CSS and JavaScript should be embedded within the HTML
+
+Return a complete, properly formatted HTML file that creates a unique game based on the theme analysis and prioritized features.`;
 
   let gameHTML = '';
   
@@ -678,7 +731,21 @@ Return ONLY a complete HTML file with embedded CSS and JavaScript. Make the game
     }
 
     const result = await response.json();
-    gameHTML = result.content[0].text;
+    let rawHTML = result.content[0].text;
+    
+    // Clean up the HTML to prevent formatting issues
+    gameHTML = rawHTML
+      .replace(/^```html\s*/i, '') // Remove opening markdown
+      .replace(/\s*```\s*$/i, '') // Remove closing markdown
+      .replace(/^Here's.*?:\s*/i, '') // Remove explanatory text
+      .replace(/^```\s*/i, '') // Remove any remaining markdown
+      .trim();
+    
+    // Ensure it starts with DOCTYPE
+    if (!gameHTML.toLowerCase().startsWith('<!doctype')) {
+      console.warn('⚠️ Generated HTML missing DOCTYPE, adding fallback structure');
+      gameHTML = `<!DOCTYPE html>\n${gameHTML}`;
+    }
 
     console.log(`✅ Generated unique game prototype for ${brief.theme} (${gameHTML.length} bytes)`);
 

@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Bug,
   CheckSquare,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -159,6 +160,33 @@ export function QATable({ runs }: QATableProps) {
     }
   };
 
+  const handleRunQA = async (runId: string) => {
+    try {
+      // Force QA phase to re-run analysis
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${runId}/force-phase`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ phase: 'qa' })
+      });
+
+      if (response.ok) {
+        // Clear existing analysis and reload
+        setCodeAnalysis(prev => {
+          const updated = { ...prev };
+          delete updated[runId];
+          return updated;
+        });
+        // Refresh the page to show updated analysis
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch (error) {
+      console.error('Error running QA:', error);
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-slate-800/70 bg-surface/70 backdrop-blur overflow-hidden">
       <header className="p-6 border-b border-slate-800/50">
@@ -279,6 +307,16 @@ export function QATable({ runs }: QATableProps) {
                       className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors"
                     >
                       <ExternalLink className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRunQA(run.id);
+                      }}
+                      className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-primary transition-colors"
+                      title="Run QA Analysis"
+                    >
+                      <RefreshCw className="h-4 w-4" />
                     </button>
                     {run.status === 'awaiting_human' && (
                       <>

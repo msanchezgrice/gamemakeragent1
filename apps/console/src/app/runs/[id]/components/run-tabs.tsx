@@ -285,6 +285,7 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
     missing: []
   });
   const [loading, setLoading] = useState(true);
+  const [playingArtifact, setPlayingArtifact] = useState<ArtifactData | null>(null);
 
   // Get stage-specific requirements and descriptions
   const getStageInfo = (stage: string) => {
@@ -523,6 +524,115 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
                     {artifact.phase}
                   </span>
                 </div>
+                {/* Game Prototype Test Button */}
+                {artifact.kind === 'game_prototype' && artifact.meta?.data && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => setPlayingArtifact(artifact)}
+                      className="px-3 py-1.5 bg-primary text-black rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-1"
+                    >
+                      <Play className="h-3 w-3" />
+                      Test Game
+                    </button>
+                  </div>
+                )}
+                
+                {/* QA Code Analysis Results */}
+                {artifact.kind === 'code_analysis' && artifact.meta?.data && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-slate-300">
+                        Quality Score: <span className="font-medium text-primary">{artifact.meta.data.qualityScore?.overall || 'N/A'}/100</span>
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        Bugs Found: <span className="font-medium text-red-400">{artifact.meta.data.bugReport?.length || 0}</span>
+                      </div>
+                    </div>
+                    {artifact.meta.data.bugReport && artifact.meta.data.bugReport.length > 0 && (
+                      <div className="space-y-2">
+                        <h6 className="text-sm font-medium text-white">Bug Reports:</h6>
+                        {artifact.meta.data.bugReport.slice(0, 3).map((bug: { severity: string; category: string; title: string; description: string }, index: number) => (
+                          <div key={index} className="p-2 bg-slate-900/50 rounded border border-slate-700/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                bug.severity === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                                bug.severity === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                                bug.severity === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {bug.severity}
+                              </span>
+                              <span className="text-xs text-slate-400">{bug.category}</span>
+                            </div>
+                            <p className="text-sm text-slate-300">{bug.title}</p>
+                            <p className="text-xs text-slate-400 mt-1">{bug.description}</p>
+                          </div>
+                        ))}
+                        {artifact.meta.data.bugReport.length > 3 && (
+                          <p className="text-xs text-slate-400">
+                            +{artifact.meta.data.bugReport.length - 3} more bugs...
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          // Force QA re-run
+                          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ phase: 'qa' })
+                          }).then(() => {
+                            setTimeout(() => window.location.reload(), 1000);
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Re-run QA
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Approve and move to deploy
+                          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ phase: 'deploy' })
+                          }).then(() => {
+                            setTimeout(() => window.location.reload(), 1000);
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-success text-black rounded-lg text-sm font-medium hover:bg-success/90 transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Reject and move back to build
+                          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ phase: 'build' })
+                          }).then(() => {
+                            setTimeout(() => window.location.reload(), 1000);
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {artifact.meta?.data && (
                   <details className="mt-3">
@@ -626,6 +736,19 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
             The {displayStagePhase?.label || displayStage} phase will become available once previous phases are completed.
           </p>
         </div>
+      )}
+      
+      {/* Game Player Modal */}
+      {playingArtifact && (
+        <GamePlayerModal 
+          artifact={{
+            id: playingArtifact.id,
+            name: playingArtifact.meta?.filename || `${playingArtifact.kind}.html`,
+            content: typeof playingArtifact.meta?.data === 'string' ? playingArtifact.meta.data : JSON.stringify(playingArtifact.meta?.data || {}),
+            kind: playingArtifact.kind
+          }} 
+          onClose={() => setPlayingArtifact(null)} 
+        />
       )}
     </div>
   );
