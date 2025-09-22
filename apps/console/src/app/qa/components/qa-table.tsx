@@ -521,6 +521,7 @@ function QADetailModal({
   );
 }
 
+// EXACT COPY from deploy tab - working modal
 function GamePlayerModal({ 
   run, 
   onClose 
@@ -535,7 +536,7 @@ function GamePlayerModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] p-4"
       onClick={onClose}
     >
       <motion.div
@@ -565,7 +566,6 @@ function GamePlayerModal({
               className="w-full h-full border-0"
               title={`${run.brief.theme} Game`}
               sandbox="allow-scripts allow-same-origin"
-              style={{ width: '100%', height: '100%', border: 'none' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400">

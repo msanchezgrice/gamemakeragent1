@@ -595,8 +595,98 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
 async function generateGamePrototype(supabaseClient: any, runId: string, brief: any, buildBrief: any) {
   console.log(`🎮 Generating playable prototype for ${brief.theme}`);
   
-  // Generate HTML5 game prototype compatible with GameTok specs
-  const gameHTML = `<!DOCTYPE html>
+  // Get artifacts from previous phases to inform game design
+  const { data: artifacts, error: artifactsError } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('kind, meta')
+    .eq('run_id', runId)
+    .in('kind', ['market_scan', 'theme_synthesis', 'priority_matrix']);
+
+  if (artifactsError) {
+    console.error('❌ Failed to fetch artifacts for game generation:', artifactsError);
+  }
+
+  const marketData = artifacts?.find(a => a.kind === 'market_scan')?.meta?.data || {};
+  const themeData = artifacts?.find(a => a.kind === 'theme_synthesis')?.meta?.data || {};
+  const priorityData = artifacts?.find(a => a.kind === 'priority_matrix')?.meta?.data || {};
+
+  console.log(`🎨 Using artifacts for game generation:`, {
+    market: !!marketData.trends,
+    theme: !!themeData.themeAnalysis,
+    priority: !!priorityData.prioritizedFeatures
+  });
+
+  // Generate unique game using LLM with artifact data
+  const gameGenerationPrompt = `You are a senior HTML5 game developer. Create a unique, playable HTML5 game based on the following specifications:
+
+GAME BRIEF:
+- Theme: ${brief.theme}
+- Goal: ${brief.goal}
+- Industry: ${brief.industry}
+- Target Audience: ${brief.targetAudience}
+
+MARKET RESEARCH:
+${marketData.insights || 'Focus on engaging, simple mechanics'}
+
+THEME ANALYSIS:
+- Core Mechanics: ${themeData.themeAnalysis?.coreMechanics?.primaryLoop || 'Tap-based interaction'}
+- Visual Style: ${themeData.themeAnalysis?.visualDirection?.artStyle || 'Modern minimalist'}
+- Color Palette: ${themeData.themeAnalysis?.visualDirection?.colorPalette?.join(', ') || '#4CAF50, #2196F3, #FF5722'}
+
+BUILD BRIEF:
+${JSON.stringify(buildBrief, null, 2)}
+
+REQUIREMENTS:
+1. Create a UNIQUE game that matches the theme and mechanics
+2. Use HTML5 Canvas with mobile-first design (360x640)
+3. Include proper GameTok SDK integration
+4. Make it actually playable with theme-appropriate mechanics
+5. Use the specified color palette and visual style
+6. Implement the core mechanics from the theme analysis
+
+Return ONLY a complete HTML file with embedded CSS and JavaScript. Make the game unique and engaging based on the theme.`;
+
+  let gameHTML = '';
+  
+  try {
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY not configured');
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 8000,
+        messages: [
+          {
+            role: 'user',
+            content: gameGenerationPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`LLM API failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    gameHTML = result.content[0].text;
+
+    console.log(`✅ Generated unique game prototype for ${brief.theme} (${gameHTML.length} bytes)`);
+
+  } catch (error) {
+    console.error('❌ Failed to generate game with LLM, using fallback:', error);
+    
+    // Fallback to a basic template but make it theme-specific
+    gameHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -647,6 +737,7 @@ async function generateGamePrototype(supabaseClient: any, runId: string, brief: 
     </script>
 </body>
 </html>`;
+  }
 
   // Store the playable prototype
   await supabaseClient
