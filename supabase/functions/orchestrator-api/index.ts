@@ -1,6 +1,82 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Helper function for LLM API calls with timeout handling
+async function callLLMWithTimeout(model: string, messages: any[], tools?: any[], temperature?: number, timeoutMs: number = 300000, maxTokens?: number) {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured');
+  }
+
+  // Set appropriate max_tokens based on model if not specified
+  // These are MAX OUTPUT TOKEN limits, not context window limits
+  let modelMaxTokens = maxTokens;
+  if (!modelMaxTokens) {
+    if (model.includes('claude-3-5-sonnet-20241022')) {
+      modelMaxTokens = 8192; // Claude 3.5 Sonnet max output
+    } else if (model.includes('claude-sonnet-4-20250514')) {
+      modelMaxTokens = 64000; // Claude Sonnet 4 max output
+    } else if (model.includes('claude-opus-4-1-20250805')) {
+      modelMaxTokens = 32000; // Claude Opus 4.1 max output
+    } else if (model.includes('claude-opus-4-20250514')) {
+      modelMaxTokens = 32000; // Claude Opus 4 max output
+    } else if (model.includes('claude-3-7-sonnet')) {
+      modelMaxTokens = 64000; // Claude Sonnet 3.7 max output
+    } else if (model.includes('claude-3-5-haiku')) {
+      modelMaxTokens = 8192; // Claude Haiku 3.5 max output
+    } else {
+      modelMaxTokens = 4000; // Safe default for unknown models
+    }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const requestBody: any = {
+      model,
+      max_tokens: modelMaxTokens,
+      messages
+    };
+
+    if (temperature !== undefined) {
+      requestBody.temperature = temperature;
+    }
+
+    if (tools && tools.length > 0) {
+      requestBody.tools = tools;
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error(`LLM API timeout after ${timeoutMs/1000}s with model ${model}`);
+    }
+    
+    throw error;
+  }
+}
+
 // Step tracking functions
 async function createOrUpdateStep(supabaseClient: any, runId: string, phase: string, status: string, input?: any, output?: any, error?: any) {
   const stepData = {
@@ -109,18 +185,26 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
 async function generateMarketArtifacts(supabaseClient: any, runId: string, brief: any) {
   console.log(`🔍 Generating real market research for ${brief.theme} in ${brief.industry}`);
   
-  // Real LLM call to Claude for market research
-  const marketPrompt = `You are a market research analyst for mobile games. Analyze the market for a ${brief.theme} themed game in the ${brief.industry} industry targeting ${brief.targetAudience || 'general audience'}.
+  // Enhanced LLM call to Claude with web search for real-time market research
+  const marketPrompt = `You are a market research analyst for mobile games with access to real-time web search. Analyze the market for a ${brief.theme} themed game in the ${brief.industry} industry targeting ${brief.targetAudience || 'general audience'}.
 
 Goal: ${brief.goal}
 
+Use web search to gather current, real-time market data about:
+- Recent ${brief.theme} games released in 2024-2025
+- Current market trends in ${brief.industry} gaming
+- Popular games similar to "${brief.theme}" theme
+- User reviews and feedback on similar games
+- Market performance data and download statistics
+
 Provide a comprehensive market analysis in JSON format with:
-1. Current market trends (array of strings)
-2. Top 5 competing games (with names and brief descriptions)
-3. Market insights and opportunities
-4. Competitor analysis with gaps identified
+1. Current market trends (array of strings) - based on recent search results
+2. Top 5 competing games (with names, brief descriptions, and recent performance data)
+3. Market insights and opportunities - informed by real-time data
+4. Competitor analysis with gaps identified - based on current market state
 5. Recommended features for this specific theme/industry combo
 6. Estimated market size and confidence level
+7. Recent market developments and emerging trends
 
 Return ONLY valid JSON with this structure:
 {
@@ -138,34 +222,26 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    console.log(`🔑 API Key status: ${apiKey ? 'Present' : 'Missing'}, Length: ${apiKey?.length || 0}`);
+    console.log(`🔑 Starting market research with Claude Sonnet 4 (64k output tokens)...`);
     
-    // Make actual LLM API call (using fetch to Claude API)
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
-        max_tokens: 30000,
-        messages: [{
-          role: 'user',
-          content: marketPrompt
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const webSearchTools = [{
+      type: "web_search_20250305",
+      name: "web_search",
+      max_uses: 5
+    }];
+    
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: marketPrompt
+      }],
+      webSearchTools, // web search for real-time market data
+      undefined, // default temperature
+      300000 // 5 minute timeout
+      // max_tokens will be auto-detected as 64000 for Claude Sonnet 4
+    );
     const marketDataText = llmResult.content[0].text;
     
     // Parse the JSON response
@@ -199,13 +275,23 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(marketData).length,
           contentType: 'application/json',
           data: marketData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
 
   } catch (error) {
     console.error(`❌ LLM call failed for market research:`, error);
+    
+    // Check if it's a timeout error
+    const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
+    console.error(`❌ Error details:`, {
+      message: error.message,
+      isTimeout: isTimeout,
+      model: 'claude-3-5-sonnet-20241022',
+      maxTokens: 30000,
+      hasApiKey: !!Deno.env.get('ANTHROPIC_API_KEY')
+    });
     
     // Store error in logs
     await supabaseClient
@@ -215,7 +301,7 @@ Return ONLY valid JSON with this structure:
         phase: 'market',
         agent: 'market-research-agent',
         level: 'error',
-        message: `Market research failed: ${error.message}`,
+        message: `Market research failed: ${error.message} | Model: claude-sonnet-4-20250514 | Max tokens: 4000`,
         thinking_trace: marketPrompt,
         llm_response: null,
         created_at: new Date().toISOString()
@@ -365,7 +451,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         temperature: 0.7,
         messages: [
@@ -411,7 +497,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(synthesisData).length,
           contentType: 'application/json',
           data: synthesisData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -895,7 +981,8 @@ Return a complete, properly formatted HTML file that creates a unique game based
           resolution: '360x640',
           fileSize: Math.round(gameHTML.length / 1024) + 'KB',
           features: ['touch_controls', 'scoring', 'session_tracking', 'gametok_integration']
-        }
+        },
+        llm_model: 'claude-opus-4-1-20250805'
       }
     });
 
@@ -961,7 +1048,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -1010,7 +1097,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(intakeData).length,
           contentType: 'application/json',
           data: intakeData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -1143,7 +1230,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -1192,7 +1279,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(deconstructData).length,
           contentType: 'application/json',
           data: deconstructData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -1417,7 +1504,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -1466,7 +1553,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(prioritizeData).length,
           contentType: 'application/json',
           data: prioritizeData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -1704,7 +1791,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -1753,7 +1840,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(qaData).length,
           contentType: 'application/json',
           data: qaData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -1868,14 +1955,20 @@ async function generateQACodeAnalysis(supabaseClient: any, runId: string, brief:
   // Create a temporary hosted URL for the game (for web browsing agents)
   const gameUrl = `data:text/html;base64,${btoa(prototypeCode)}`;
   
-  // Enhanced QA code analysis prompt with web browsing simulation
-  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game testing and code analysis. You have both code review and gameplay testing capabilities.
+  // Enhanced QA code analysis prompt with text editor tool
+  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game testing and code analysis. You have access to a text editor tool for detailed code examination.
 
 TESTING APPROACH:
-1. **CODE ANALYSIS**: Review the source code for bugs and issues
-2. **GAMEPLAY SIMULATION**: Mentally simulate playing the game based on the code
-3. **MOBILE TESTING**: Analyze touch controls and mobile compatibility
-4. **PERFORMANCE REVIEW**: Check for optimization opportunities
+1. **TEXT EDITOR ANALYSIS**: Use the text editor tool to create and analyze the game code file
+2. **CODE REVIEW**: Systematically examine HTML, CSS, and JavaScript for bugs
+3. **GAMEPLAY SIMULATION**: Mentally simulate playing the game based on the code structure
+4. **MOBILE TESTING**: Analyze touch controls and mobile compatibility
+5. **PERFORMANCE REVIEW**: Check for optimization opportunities
+
+INSTRUCTIONS:
+1. First, use the text editor tool to create a file called "game_prototype.html" with the provided code
+2. Analyze the code structure, game logic, and potential issues
+3. Provide comprehensive QA analysis based on your examination
 
 GAME TO TEST:
 Game URL (for reference): ${gameUrl}
@@ -2020,12 +2113,16 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805', // Enhanced with gameplay simulation
+        model: 'claude-3-5-sonnet-20241022', // Enhanced with gameplay simulation
         max_tokens: 30000, // Increased for comprehensive analysis
         temperature: 0.1, // Lower temperature for more focused analysis
         messages: [{
           role: 'user',
           content: codeAnalysisPrompt
+        }],
+        tools: [{
+          type: "text_editor_20241022",
+          name: "text_editor"
         }]
       })
     });
@@ -2071,7 +2168,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(analysisData).length,
           contentType: 'application/json',
           data: analysisData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString(),
           bugsFound: analysisData.bugReport?.length || 0,
           qualityScore: analysisData.qualityScore?.overall || 0
@@ -2263,7 +2360,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -2312,7 +2409,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(deployData).length,
           contentType: 'application/json',
           data: deployData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -2538,7 +2635,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -2587,7 +2684,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(measureData).length,
           contentType: 'application/json',
           data: measureData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -2861,7 +2958,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 30000,
         messages: [{
           role: 'user',
@@ -2910,7 +3007,7 @@ Return ONLY valid JSON with this structure:
           size: JSON.stringify(decisionData).length,
           contentType: 'application/json',
           data: decisionData,
-          llm_model: 'claude-opus-4-1-20250805',
+          llm_model: 'claude-sonnet-4-20250514',
           generated_at: new Date().toISOString()
         }
       });
@@ -3541,6 +3638,42 @@ serve(async (req) => {
           status: 200 
         }
       )
+    }
+
+    // Test endpoint for Claude API
+    if (path === '/test-claude') {
+      try {
+        console.log('🧪 Testing Claude API...');
+        const testResult = await callLLMWithTimeout(
+          'claude-3-5-sonnet-20241022',
+          [{
+            role: 'user',
+            content: 'Respond with exactly this JSON: {"test": "success", "message": "Claude API is working"}'
+          }],
+          undefined, // no tools
+          undefined, // default temperature
+          30000 // 30 second timeout for test
+          // max_tokens will be auto-detected as 8192 for Claude 3.5 Sonnet
+        );
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          claude_response: testResult.content[0].text,
+          model: 'claude-3-5-sonnet-20241022'
+        }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error.message,
+          api_key_present: !!Deno.env.get('ANTHROPIC_API_KEY')
+        }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
     }
 
     // Route not found
