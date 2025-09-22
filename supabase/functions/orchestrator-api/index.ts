@@ -410,33 +410,21 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    // Make LLM call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || 'test-key',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 30000,
-        temperature: 0.7,
-        messages: [
-          {
-            role: 'user',
-            content: synthesisPrompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`LLM API error: ${response.status}`);
-    }
-
-    const result = await response.json();
-    const synthesisData = JSON.parse(result.content[0].text);
+    console.log(`🔑 Starting theme synthesis with Claude Sonnet 4 (64k output tokens)...`);
+    
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: synthesisPrompt
+      }],
+      undefined, // no tools for synthesis
+      0.7, // temperature
+      300000, // 5 minute timeout
+      30000 // explicit max_tokens
+    );
+    const synthesisData = JSON.parse(llmResult.content[0].text);
 
     // Log successful analysis
     await supabaseClient
@@ -528,54 +516,22 @@ ${synthesisData.themeAnalysis.riskAssessment.themeRisks.map(risk => `- **${risk.
         created_at: new Date().toISOString()
       });
     
-    // Fallback to structured placeholder
-    const fallbackData = {
-      themeAnalysis: {
-        visualDirection: {
-          primaryAesthetic: `${brief.theme} inspired design`,
-          colorPalette: ['#2563eb', '#7c3aed', '#059669'],
-          artStyle: 'Modern minimalist',
-          iconography: [brief.theme, 'progress indicators'],
-          moodKeywords: ['engaging', 'intuitive', 'rewarding']
-        },
-        coreMechanics: {
-          primaryLoop: `${brief.theme} based interaction cycle`,
-          inputMethods: ['tap', 'swipe'],
-          progressionSystem: 'Level-based advancement',
-          difficultyScaling: 'Adaptive difficulty',
-          sessionStructure: '60-120 second sessions'
-        },
-        differentiation: {
-          uniqueSellingPoints: [`Unique ${brief.theme} mechanics`, 'Intuitive controls', 'Quick sessions'],
-          competitorGaps: ['Better theme integration', 'Smoother progression'],
-          innovationOpportunities: ['Novel interaction patterns', 'Enhanced feedback']
-        }
-      },
-      recommendations: {
-        immediate: ['Focus on core loop', 'Implement basic progression', 'Add feedback systems'],
-        shortTerm: ['Polish visuals', 'Add social features'],
-        longTerm: ['Expand content', 'Add monetization']
-      },
-      confidence: 0.6,
-      reasoning: 'Fallback analysis due to LLM API failure'
-    };
-
+    // Store error log - no fallback data
     await supabaseClient
-      .from('orchestrator_artifacts')
+      .from('orchestrator_logs')
       .insert({
         run_id: runId,
         phase: 'synthesis',
-        kind: 'theme_synthesis',
-        path: `runs/${runId}/theme_synthesis.json`,
-        meta: {
-          filename: 'theme_synthesis.json',
-          size: JSON.stringify(fallbackData).length,
-          contentType: 'application/json',
-          data: fallbackData,
-          fallback: true,
-          error: error.message
-        }
+        agent: 'theme-synthesis-agent',
+        level: 'error',
+        message: `Theme synthesis failed: ${error.message}`,
+        thinking_trace: synthesisPrompt,
+        llm_response: null,
+        created_at: new Date().toISOString()
       });
+
+    // Re-throw the error to fail the phase
+    throw error;
   }
 }
 
@@ -1134,33 +1090,20 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 Starting deconstruct analysis with Claude Sonnet 4 (64k output tokens)...`);
     
-    // Make actual LLM API call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 30000,
-        messages: [{
-          role: 'user',
-          content: deconstructPrompt
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: deconstructPrompt
+      }],
+      undefined, // no tools for deconstruct
+      undefined, // default temperature
+      300000, // 5 minute timeout
+      30000 // explicit max_tokens
+    );
     const deconstructDataText = llmResult.content[0].text;
     
     // Parse the JSON response
@@ -1408,33 +1351,20 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 Starting prioritization analysis with Claude Sonnet 4 (64k output tokens)...`);
     
-    // Make actual LLM API call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 30000,
-        messages: [{
-          role: 'user',
-          content: prioritizePrompt
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: prioritizePrompt
+      }],
+      undefined, // no tools for prioritize
+      undefined, // default temperature
+      300000, // 5 minute timeout
+      30000 // explicit max_tokens
+    );
     const prioritizeDataText = llmResult.content[0].text;
     
     // Parse the JSON response
@@ -2015,7 +1945,7 @@ Return ONLY valid JSON with this structure:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022', // Enhanced with gameplay simulation
+        model: 'claude-sonnet-4-20250514', // Enhanced with gameplay simulation
         max_tokens: 30000, // Increased for comprehensive analysis
         temperature: 0.1, // Lower temperature for more focused analysis
         messages: [{
@@ -2251,33 +2181,20 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 Starting deployment strategy with Claude Sonnet 4 (64k output tokens)...`);
     
-    // Make actual LLM API call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 30000,
-        messages: [{
-          role: 'user',
-          content: deployPrompt
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: deployPrompt
+      }],
+      undefined, // no tools for deploy
+      undefined, // default temperature
+      300000, // 5 minute timeout
+      30000 // explicit max_tokens
+    );
     const deployDataText = llmResult.content[0].text;
     
     // Parse the JSON response
@@ -2526,33 +2443,20 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 Starting measurement strategy with Claude Sonnet 4 (64k output tokens)...`);
     
-    // Make actual LLM API call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 30000,
-        messages: [{
-          role: 'user',
-          content: measurePrompt
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
+    // Use helper function with timeout handling - Claude Sonnet 4 for better performance and higher token limits
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{
+        role: 'user',
+        content: measurePrompt
+      }],
+      undefined, // no tools for measure
+      undefined, // default temperature
+      300000, // 5 minute timeout
+      30000 // explicit max_tokens
+    );
     const measureDataText = llmResult.content[0].text;
     
     // Parse the JSON response
@@ -3534,7 +3438,7 @@ serve(async (req) => {
       try {
         console.log('🧪 Testing Claude API...');
         const testResult = await callLLMWithTimeout(
-          'claude-3-5-sonnet-20241022',
+          'claude-sonnet-4-20250514',
           [{
             role: 'user',
             content: 'Respond with exactly this JSON: {"test": "success", "message": "Claude API is working"}'
@@ -3542,13 +3446,13 @@ serve(async (req) => {
           undefined, // no tools
           undefined, // default temperature
           30000 // 30 second timeout for test
-          // max_tokens will be auto-detected as 8192 for Claude 3.5 Sonnet
+          // max_tokens will be auto-detected as 64000 for Claude Sonnet 4
         );
         
         return new Response(JSON.stringify({ 
           success: true, 
           claude_response: testResult.content[0].text,
-          model: 'claude-3-5-sonnet-20241022'
+          model: 'claude-sonnet-4-20250514'
         }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
