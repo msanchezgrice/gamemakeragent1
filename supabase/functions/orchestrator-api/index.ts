@@ -3143,10 +3143,10 @@ serve(async (req) => {
           processedRuns.push(updatedRun)
           console.log(`✅ Started run ${run.id} - now running in ${run.phase} phase`)
           
-          // CRITICAL FIX: Generate artifacts for the current phase when starting
+          // CRITICAL FIX: Generate artifacts for the current phase when starting (with brief like force-phase)
           try {
             console.log(`🎨 Auto-processing: Generating artifacts for ${run.phase} phase...`)
-            await generatePhaseArtifacts(supabaseClient, run.id, run.phase)
+            await generatePhaseArtifacts(supabaseClient, run.id, run.phase, run.brief)
             console.log(`✅ Auto-processing: Generated artifacts for ${run.phase} phase`)
           } catch (artifactError) {
             console.error(`❌ Auto-processing: Failed to generate artifacts for ${run.phase}:`, artifactError)
@@ -3208,10 +3208,10 @@ serve(async (req) => {
             processedRuns.push(updatedRun)
             console.log(`🤖 Auto-advanced run ${run.id} from ${run.phase} to ${nextPhase} (${nextStatus})`)
             
-            // CRITICAL FIX: Generate artifacts for the new phase
+            // CRITICAL FIX: Generate artifacts for the new phase (with brief like force-phase)
             try {
               console.log(`🎨 Auto-processing: Generating artifacts for ${nextPhase} phase...`)
-              await generatePhaseArtifacts(supabaseClient, run.id, nextPhase)
+              await generatePhaseArtifacts(supabaseClient, run.id, nextPhase, run.brief)
               console.log(`✅ Auto-processing: Generated artifacts for ${nextPhase} phase`)
             } catch (artifactError) {
               console.error(`❌ Auto-processing: Failed to generate artifacts for ${nextPhase}:`, artifactError)
