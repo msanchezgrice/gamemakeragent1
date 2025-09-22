@@ -630,6 +630,62 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
   await generateGamePrototype(supabaseClient, runId, brief, buildBriefData);
 }
 
+function getThemeConfig(theme: string, goal: string) {
+  const themeKey = theme.toLowerCase();
+  
+  if (themeKey.includes('temple') || themeKey.includes('runner')) {
+    return {
+      mechanics: 'running and dodging obstacles',
+      objects: ['temple pillars', 'ancient coins', 'stone blocks'],
+      colors: ['#8B4513', '#DAA520', '#CD853F'],
+      instructions: 'Tap to jump over obstacles and collect coins'
+    };
+  } else if (themeKey.includes('space') || themeKey.includes('cosmic')) {
+    return {
+      mechanics: 'navigating through space and collecting items',
+      objects: ['stars', 'planets', 'asteroids', 'space gems'],
+      colors: ['#000080', '#4169E1', '#FFD700'],
+      instructions: 'Tap to navigate and collect cosmic items'
+    };
+  } else if (themeKey.includes('underwater') || themeKey.includes('ocean')) {
+    return {
+      mechanics: 'swimming and collecting sea treasures',
+      objects: ['fish', 'coral', 'pearls', 'seaweed'],
+      colors: ['#008B8B', '#20B2AA', '#87CEEB'],
+      instructions: 'Tap to swim and collect ocean treasures'
+    };
+  } else if (themeKey.includes('city') || themeKey.includes('urban')) {
+    return {
+      mechanics: 'building and managing city elements',
+      objects: ['buildings', 'roads', 'parks', 'vehicles'],
+      colors: ['#696969', '#4682B4', '#32CD32'],
+      instructions: 'Tap to place and manage city elements'
+    };
+  } else if (themeKey.includes('racing') || themeKey.includes('speed')) {
+    return {
+      mechanics: 'racing and avoiding obstacles',
+      objects: ['cars', 'road barriers', 'speed boosts', 'checkpoints'],
+      colors: ['#FF4500', '#FFD700', '#32CD32'],
+      instructions: 'Tap to steer and avoid obstacles'
+    };
+  } else if (themeKey.includes('puzzle') || themeKey.includes('match')) {
+    return {
+      mechanics: 'matching and solving puzzles',
+      objects: ['puzzle pieces', 'gems', 'tiles', 'patterns'],
+      colors: ['#9370DB', '#FF69B4', '#00CED1'],
+      instructions: 'Tap to match and solve puzzles'
+    };
+  } else {
+    // Generic theme-based fallback
+    return {
+      mechanics: `${theme.toLowerCase()} themed gameplay`,
+      objects: [`${theme.toLowerCase()} elements`, 'collectibles', 'obstacles'],
+      colors: ['#4CAF50', '#2196F3', '#FF5722'],
+      instructions: `Tap to play ${theme.toLowerCase()} game`
+    };
+  }
+}
+
 async function generateGamePrototype(supabaseClient: any, runId: string, brief: any, buildBrief: any) {
   console.log(`🎮 Generating playable prototype for ${brief.theme}`);
   
@@ -682,13 +738,25 @@ ${JSON.stringify(buildBrief, null, 2)}
 
 CRITICAL REQUIREMENTS:
 1. Create a UNIQUE game that matches the theme and mechanics from the analysis
-2. Use HTML5 Canvas with mobile-first design (360x640)
-3. Include proper GameTok SDK integration via postMessage
-4. Make it actually playable with theme-appropriate mechanics
-5. Use the specified color palette and visual style from theme analysis
-6. Implement the core mechanics and input methods from the theme analysis
-7. Ensure proper HTML formatting - NO markdown code blocks, NO backticks
-8. Return clean, properly formatted HTML that can be directly executed
+2. DO NOT create generic falling blocks, tetris-like, or space shooter games
+3. Design gameplay mechanics that are SPECIFICALLY tailored to the theme (${brief.theme})
+4. Use HTML5 Canvas with mobile-first design (360x640)
+5. Include proper GameTok SDK integration via postMessage
+6. Make it actually playable with theme-appropriate mechanics and visuals
+7. Use the specified color palette and visual style from theme analysis
+8. Implement the core mechanics and input methods from the theme analysis
+9. Create game objects, interactions, and goals that relate directly to the theme
+10. Ensure proper HTML formatting - NO markdown code blocks, NO backticks
+11. Return clean, properly formatted HTML that can be directly executed
+
+THEME-SPECIFIC DESIGN REQUIREMENTS:
+- If theme is "Temple runner": Create running/dodging mechanics with temple aesthetics
+- If theme is "Space exploration": Create navigation/discovery mechanics with cosmic visuals
+- If theme is "Underwater adventure": Create swimming/collecting mechanics with ocean life
+- If theme is "City building": Create placement/management mechanics with urban elements
+- If theme is "Racing": Create speed/timing mechanics with vehicles and tracks
+- If theme is "Puzzle": Create logic/matching mechanics with themed puzzle pieces
+- Always adapt the core gameplay loop to match the theme's natural interactions
 
 FORMATTING REQUIREMENTS:
 - Return ONLY the HTML content
@@ -752,7 +820,8 @@ Return a complete, properly formatted HTML file that creates a unique game based
   } catch (error) {
     console.error('❌ Failed to generate game with LLM, using fallback:', error);
     
-    // Fallback to a basic template but make it theme-specific
+    // Create theme-specific fallback based on the theme
+    const themeConfig = getThemeConfig(brief.theme, brief.goal);
     gameHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -777,7 +846,7 @@ Return a complete, properly formatted HTML file that creates a unique game based
         <div class="start-screen" id="startScreen">
             <h1>${brief.theme}</h1>
             <p>${brief.goal}</p>
-            <p>Tap to ${brief.theme.toLowerCase().includes('space') ? 'navigate through space' : 'play'}</p>
+            <p>${themeConfig.instructions}</p>
             <button class="start-button" onclick="startGame()">Start Game</button>
         </div>
         <div class="game-over" id="gameOverScreen">
@@ -1228,15 +1297,20 @@ async function generatePrioritizeArtifacts(supabaseClient: any, runId: string, b
   const synthesisData = synthesisArtifacts?.[0]?.meta?.data || {};
   const deconstructData = deconstructArtifacts?.[0]?.meta?.data || {};
   
-  // Enhanced LLM call to Claude for comprehensive prioritization
-  const prioritizePrompt = `You are a senior product strategist specializing in mobile game development prioritization. Based on comprehensive market research, theme synthesis, and competitive deconstruction, create a detailed prioritization framework for a ${brief.theme} game in the ${brief.industry} industry.
+  // Enhanced LLM call to Claude for HTML5 hyper-casual game feature prioritization
+  const prioritizePrompt = `You are a senior HTML5 hyper-casual game designer specializing in feature prioritization for web-based mini games. Based on comprehensive market research, theme synthesis, and competitive analysis, create a detailed ranked feature list for an HTML5 hyper-casual mini game.
 
-CONTEXT:
+GAME CONTEXT:
 Theme: ${brief.theme}
 Industry: ${brief.industry}
 Target Audience: ${brief.targetAudience || 'General'}
 Goal: ${brief.goal}
-Constraints: ${JSON.stringify(brief.constraints || {})}
+Game Type: ${brief.gameType || 'hyper-casual'}
+Control Type: ${brief.controlType || 'touch'}
+Tech Stack: HTML5 Canvas, JavaScript, Mobile-first responsive design
+Platform: Web browsers (mobile and desktop)
+Session Length: 30-120 seconds
+Monetization: None (focus on engagement and fun)
 
 MARKET RESEARCH DATA:
 ${JSON.stringify(marketData, null, 2)}
@@ -1244,74 +1318,92 @@ ${JSON.stringify(marketData, null, 2)}
 THEME SYNTHESIS DATA:
 ${JSON.stringify(synthesisData, null, 2)}
 
-COMPETITIVE DECONSTRUCTION:
+COMPETITIVE ANALYSIS:
 ${JSON.stringify(deconstructData, null, 2)}
 
-Based on this comprehensive analysis, create a prioritization framework that will directly inform the build phase. Focus on:
-1. Ranked feature opportunities with impact/effort scoring
-2. Development roadmap with phases and timelines
-3. Resource allocation recommendations
-4. Risk-adjusted priority matrix
-5. MVP definition and scope
-6. Success metrics and KPIs
-7. Go-to-market strategy priorities
+Create a prioritized feature list specifically for HTML5 hyper-casual game development. Focus on:
+1. Core gameplay mechanics ranked by importance
+2. Visual and audio features that enhance the theme
+3. User interface elements for optimal mobile experience
+4. Technical features for smooth HTML5 performance
+5. Engagement features for replay value
+6. Accessibility features for broader reach
 
 Return ONLY valid JSON with this structure:
 {
   "prioritizedFeatures": [
     {
-      "feature": "Feature Name",
+      "name": "Feature Name",
       "description": "Feature description",
-      "impactScore": 0.0-1.0,
-      "effortScore": 0.0-1.0,
-      "priorityScore": 0.0-1.0,
-      "category": "core|enhancement|nice-to-have",
+      "category": "core-mechanic|visual|ui|technical|engagement|accessibility",
+      "priority": "critical|high|medium|low",
+      "implementation": "simple|moderate|complex",
+      "effort": "low|medium|high",
+      "impact": "low|medium|high",
+      "themeRelevance": 0.0-1.0,
+      "mobileOptimized": true/false,
       "dependencies": ["dependency1", "dependency2", ...]
     }
   ],
-  "developmentRoadmap": {
-    "mvp": {
-      "features": ["feature1", "feature2", ...],
-      "timelineWeeks": number,
-      "resources": "description"
-    },
-    "phase1": {
-      "features": ["feature1", "feature2", ...],
-      "timelineWeeks": number,
-      "resources": "description"
-    },
-    "phase2": {
-      "features": ["feature1", "feature2", ...],
-      "timelineWeeks": number,
-      "resources": "description"
-    }
-  },
-  "resourceAllocation": {
-    "development": 0.0-1.0,
-    "design": 0.0-1.0,
-    "testing": 0.0-1.0,
-    "marketing": 0.0-1.0
-  },
-  "riskMatrix": [
+  "coreGameplayMechanics": [
     {
-      "opportunity": "Opportunity name",
-      "risk": "Risk description",
-      "probability": 0.0-1.0,
-      "impact": 0.0-1.0,
-      "mitigation": "Mitigation strategy"
+      "mechanic": "Primary game mechanic name",
+      "description": "How this mechanic works",
+      "inputMethod": "tap|swipe|drag|tilt|multi-touch",
+      "complexity": "simple|moderate|complex",
+      "themeAlignment": "How this aligns with the theme"
     }
   ],
-  "successMetrics": {
-    "primary": ["metric1", "metric2", ...],
-    "secondary": ["metric1", "metric2", ...],
-    "targets": {
-      "userEngagement": "target",
-      "retention": "target",
-      "monetization": "target"
+  "visualFeatures": [
+    {
+      "feature": "Visual feature name",
+      "purpose": "Why this visual feature is important",
+      "implementation": "HTML5 Canvas technique or CSS approach",
+      "priority": "critical|high|medium|low"
+    }
+  ],
+  "technicalRequirements": [
+    {
+      "requirement": "Technical requirement",
+      "reason": "Why this is needed for HTML5 hyper-casual games",
+      "implementation": "How to implement this",
+      "priority": "critical|high|medium|low"
+    }
+  ],
+  "mobileOptimizations": [
+    {
+      "optimization": "Mobile-specific optimization",
+      "benefit": "How this improves mobile experience",
+      "implementation": "Technical approach",
+      "priority": "critical|high|medium|low"
+    }
+  ],
+  "engagementFeatures": [
+    {
+      "feature": "Engagement feature name",
+      "purpose": "How this increases replay value",
+      "implementation": "How to implement",
+      "priority": "critical|high|medium|low"
+    }
+  ],
+  "developmentPhases": {
+    "phase1_core": {
+      "features": ["Essential features for basic gameplay"],
+      "description": "Core mechanics and basic visuals",
+      "estimatedHours": "Development time estimate"
+    },
+    "phase2_polish": {
+      "features": ["Polish and enhancement features"],
+      "description": "Visual improvements and UX enhancements",
+      "estimatedHours": "Development time estimate"
+    },
+    "phase3_engagement": {
+      "features": ["Features that increase replay value"],
+      "description": "Additional mechanics and content",
+      "estimatedHours": "Development time estimate"
     }
   },
-  "goToMarketPriorities": ["priority1", "priority2", ...],
-  "recommendations": "Strategic recommendations for execution"
+  "recommendations": "Specific recommendations for HTML5 hyper-casual game development based on the theme and analysis"
 }`;
 
   try {
@@ -3076,7 +3168,7 @@ serve(async (req) => {
 
       // Simulate LLM processing with realistic delays and potential human intervention
       const shouldRequireHuman = Math.random() < 0.3 // 30% chance of requiring human intervention
-      if (nextStatus === 'running' && shouldRequireHuman && ['synthesis', 'prioritize', 'qa'].includes(nextPhase)) {
+      if (nextStatus === 'running' && shouldRequireHuman && ['synthesis', 'qa'].includes(nextPhase)) {
         nextStatus = 'awaiting_human'
         
         // Create a manual task
@@ -3381,7 +3473,7 @@ serve(async (req) => {
             
             // 30% chance of requiring human intervention in key phases
             const shouldRequireHuman = Math.random() < 0.3
-            if (shouldRequireHuman && ['synthesis', 'prioritize', 'qa'].includes(nextPhase)) {
+            if (shouldRequireHuman && ['synthesis', 'qa'].includes(nextPhase)) {
               nextStatus = 'awaiting_human'
               
               // Create a manual task
