@@ -139,6 +139,15 @@ export default function RunDetailPage() {
     fetchRun();
   }, [fetchRun]);
 
+  // Auto-refresh every 15 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 RunDetailPage: Auto-refreshing run data...');
+      fetchRun();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [fetchRun]);
+
   if (loading) {
     return (
       <main className="mx-auto max-w-7xl px-8 py-12">
