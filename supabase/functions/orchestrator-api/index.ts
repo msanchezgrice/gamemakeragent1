@@ -23,8 +23,8 @@ function extractJsonFromLLMResponse(text: string): string {
   return cleanText;
 }
 
-// Helper function for LLM API calls with timeout handling
-async function callLLMWithTimeout(model: string, messages: any[], tools?: any[], temperature?: number, timeoutMs: number = 300000, maxTokens?: number) {
+// Helper function for LLM API calls with timeout handling and retry logic
+async function callLLMWithTimeout(model: string, messages: any[], tools?: any[], temperature?: number, timeoutMs: number = 300000, maxTokens?: number, retries: number = 3) {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY not configured');
@@ -51,52 +51,76 @@ async function callLLMWithTimeout(model: string, messages: any[], tools?: any[],
     }
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const requestBody: any = {
-      model,
-      max_tokens: modelMaxTokens,
-      messages
-    };
+    try {
+      const requestBody: any = {
+        model,
+        max_tokens: modelMaxTokens,
+        messages
+      };
 
-    if (temperature !== undefined) {
-      requestBody.temperature = temperature;
+      if (temperature !== undefined) {
+        requestBody.temperature = temperature;
+      }
+
+      if (tools && tools.length > 0) {
+        requestBody.tools = tools;
+      }
+
+      console.log(`🔄 LLM API attempt ${attempt + 1}/${retries} with model ${model} (${modelMaxTokens} max tokens)`);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+      }
+
+      console.log(`✅ LLM API success on attempt ${attempt + 1}`);
+      return await response.json();
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error;
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`LLM API timeout after ${timeoutMs/1000}s with model ${model}`);
+      }
+      
+      // Check if it's a network/SSL error that might be retryable
+      const isRetryable = error.message?.includes('HandshakeFailure') || 
+                         error.message?.includes('Connect') ||
+                         error.message?.includes('ECONNRESET') ||
+                         error.message?.includes('ECONNREFUSED');
+      
+      if (!isRetryable || attempt === retries - 1) {
+        console.error(`❌ LLM API failed on attempt ${attempt + 1}:`, error.message);
+        throw error;
+      }
+      
+      console.log(`⚠️ LLM API attempt ${attempt + 1} failed (retryable), waiting before retry:`, error.message);
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
-
-    if (tools && tools.length > 0) {
-      requestBody.tools = tools;
-    }
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      throw new Error(`LLM API timeout after ${timeoutMs/1000}s with model ${model}`);
-    }
-    
-    throw error;
   }
+  
+  throw lastError;
 }
 
 // Step tracking functions
@@ -324,7 +348,7 @@ Return ONLY valid JSON with this structure:
         phase: 'market',
         agent: 'market-research-agent',
         level: 'error',
-        message: `Market research failed: ${error.message} | Model: claude-sonnet-4-20250514 | Max tokens: 4000`,
+        message: `Market research failed: ${error.message} | Model: claude-sonnet-4-20250514 | Max tokens: 64000`,
         thinking_trace: marketPrompt,
         llm_response: null,
         created_at: new Date().toISOString()
