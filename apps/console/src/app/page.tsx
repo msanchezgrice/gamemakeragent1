@@ -63,7 +63,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    fetchRuns(false); // Initial load
+    fetchRuns(true); // Initial load with auto-processing enabled
   }, []);
 
   // Auto-refresh every 30 seconds for more responsive updates (background only)
