@@ -537,6 +537,63 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
                   </div>
                 )}
                 
+                {/* Synthesis Approval Buttons */}
+                {artifact.kind === 'theme_synthesis' && run.status === 'awaiting_human' && run.phase === 'synthesis' && (
+                  <div className="mt-4 p-4 bg-slate-800/30 rounded-lg border border-warning/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="h-4 w-4 text-warning" />
+                      <span className="text-sm font-medium text-warning">Human Approval Required</span>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-4">
+                      Review the theme synthesis and decide whether to proceed to the next phase.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          // Approve and move to deconstruct
+                          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ phase: 'deconstruct' })
+                          }).then(() => {
+                            setTimeout(() => window.location.reload(), 1000);
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-success text-black rounded-lg text-sm font-medium hover:bg-success/90 transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          const comments = prompt('Please provide comments for the rejection. What needs to be refined in the theme synthesis?');
+                          if (!comments) return; // User cancelled
+                          
+                          // Reject and move back to synthesis with comments
+                          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                              phase: 'synthesis',
+                              comments: comments
+                            })
+                          }).then(() => {
+                            setTimeout(() => window.location.reload(), 1000);
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* QA Code Analysis Results */}
                 {artifact.kind === 'code_analysis' && artifact.meta?.data && (
                   <div className="mt-3 space-y-3">

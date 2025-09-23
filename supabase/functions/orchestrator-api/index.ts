@@ -1,8 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Helper function to generate game summary for QA display
+function generateGameSummary(brief: any): string {
+  const theme = brief.theme || 'Unknown';
+  const subgenre = brief.subgenre || brief.gameType || 'casual';
+  const visualHook = brief.visualHook || 'engaging visuals';
+  
+  // Create a descriptive summary
+  const themeAdjective = theme.toLowerCase().includes('space') ? 'cosmic' :
+                        theme.toLowerCase().includes('nature') ? 'natural' :
+                        theme.toLowerCase().includes('urban') ? 'urban' :
+                        theme.toLowerCase().includes('underwater') ? 'aquatic' :
+                        theme.toLowerCase().includes('fantasy') ? 'magical' :
+                        'themed';
+  
+  const styleDescriptor = visualHook.toLowerCase().includes('minimalist') ? 'minimalist' :
+                         visualHook.toLowerCase().includes('exploding') ? 'explosive' :
+                         visualHook.toLowerCase().includes('juicy') ? 'juicy' :
+                         visualHook.toLowerCase().includes('satisfying') ? 'satisfying' :
+                         visualHook.toLowerCase().includes('perfect') ? 'precision' :
+                         'stylized';
+  
+  return `${themeAdjective} ${styleDescriptor} ${subgenre.toLowerCase()}`.replace(/\s+/g, ' ').trim();
+}
+
 // Helper function to extract JSON from LLM response (removes markdown code blocks)
 function extractJsonFromLLMResponse(text: string): string {
+  // Safety check for undefined/null text
+  if (!text || typeof text !== 'string') {
+    throw new Error('Invalid text provided to extractJsonFromLLMResponse');
+  }
+  
   // Remove markdown code blocks if present
   let cleanText = text.trim();
   
@@ -503,7 +532,7 @@ Return ONLY valid JSON with this structure:
         level: 'info',
         message: `Theme synthesis completed for ${brief.theme}`,
         thinking_trace: synthesisPrompt,
-        llm_response: result.content[0].text,
+        llm_response: llmResult.content[0].text,
         created_at: new Date().toISOString()
       });
 
@@ -3093,12 +3122,17 @@ serve(async (req) => {
       // Create new run
       const body = await req.json()
       
+      // Generate game summary for display
+      const gameSummary = generateGameSummary(body.brief);
+      
       const { data: run, error } = await supabaseClient
         .from('orchestrator_runs')
         .insert({
           brief: body.brief,
           status: 'queued',
-          phase: 'intake'
+          phase: 'intake',
+          game_summary: gameSummary,
+          require_human_approvals: body.brief.requireHumanApprovals || false
         })
         .select()
         .single()
@@ -3473,9 +3507,9 @@ serve(async (req) => {
           if (currentPhaseIndex < phaseOrder.length - 1) {
             nextPhase = phaseOrder[currentPhaseIndex + 1]
             
-            // 30% chance of requiring human intervention in key phases
-            const shouldRequireHuman = Math.random() < 0.3
-            if (shouldRequireHuman && ['synthesis', 'qa'].includes(nextPhase)) {
+            // Check if human approvals are required for this run
+            const shouldRequireHuman = run.require_human_approvals && ['synthesis', 'qa'].includes(nextPhase)
+            if (shouldRequireHuman) {
               nextStatus = 'awaiting_human'
               
               // Create a manual task

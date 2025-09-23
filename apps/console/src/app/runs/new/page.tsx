@@ -15,7 +15,9 @@ import {
   BarChart,
   Globe,
   Zap,
-  ChevronDown
+  ChevronDown,
+  Settings,
+  User
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { createRun } from '../../../lib/data-source';
@@ -114,6 +116,7 @@ interface IntakeBrief {
     budgetUsd?: number;
     timeboxHours?: number;
   };
+  requireHumanApprovals: boolean;
 }
 
 function NewRunForm() {
@@ -147,7 +150,8 @@ function NewRunForm() {
       socialMedia: true,
       gameAnalytics: false
     },
-    constraints: {}
+    constraints: {},
+    requireHumanApprovals: false
   });
 
   // Handle remix functionality
@@ -500,6 +504,27 @@ function NewRunForm() {
                 </div>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Workflow Configuration */}
+        <section className="rounded-3xl border border-slate-800/70 bg-surface/70 p-6 backdrop-blur">
+          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            Workflow Configuration
+          </h2>
+          
+          <div className="mb-6">
+            <ToggleField
+              label="Require Human Approvals"
+              description="Pause at key stages for manual review and approval"
+              checked={brief.requireHumanApprovals}
+              onChange={(checked) => setBrief(prev => ({
+                ...prev,
+                requireHumanApprovals: checked
+              }))}
+              icon={<User className="h-4 w-4" />}
+            />
           </div>
         </section>
 
