@@ -181,15 +181,20 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
   console.log(`🎨 Generating artifacts for ${phase} phase of run ${runId}`)
   
   // Check if artifacts for this phase already exist to prevent duplicates
-  const { data: existingArtifacts } = await supabaseClient
+  const { data: existingArtifacts, error: checkError } = await supabaseClient
     .from('orchestrator_artifacts')
-    .select('id')
+    .select('id, kind')
     .eq('run_id', runId)
     .eq('phase', phase)
-    .limit(1);
+    .limit(5);
+
+  if (checkError) {
+    console.error(`❌ Error checking existing artifacts for ${phase}:`, checkError);
+  }
 
   if (existingArtifacts && existingArtifacts.length > 0) {
-    console.log(`⚠️ Artifacts already exist for ${phase} phase of run ${runId}, skipping generation`);
+    console.log(`⚠️ Artifacts already exist for ${phase} phase of run ${runId}:`, existingArtifacts.map(a => a.kind).join(', '));
+    console.log(`⚠️ Skipping generation to prevent duplicates`);
     return;
   }
   
@@ -619,7 +624,14 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
     market: !!marketData.trends,
     theme: !!themeData.themeAnalysis,
     priority: !!priorityData.prioritizedFeatures,
-    intake: { gameType: brief.gameType, controlType: brief.controlType }
+    intake: { 
+      gameType: brief.gameType, 
+      controlType: brief.controlType,
+      subgenre: brief.subgenre,
+      visualHook: brief.visualHook,
+      guidingNotes: brief.guidingNotes,
+      referenceGames: brief.referenceGames
+    }
   });
 
   // Extract prioritized features and mechanics from artifacts
@@ -634,7 +646,14 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
       originalBrief: brief,
       marketInsights: marketInsights,
       themeAnalysis: themeData.themeAnalysis,
-      prioritizedFeatures: prioritizedFeatures
+      prioritizedFeatures: prioritizedFeatures,
+      // Include new intake form fields
+      gameDesignInputs: {
+        subgenre: brief.subgenre,
+        visualHook: brief.visualHook,
+        guidingNotes: brief.guidingNotes,
+        referenceGames: brief.referenceGames
+      }
     },
     technicalSpecs: {
       engine: "HTML5 Canvas",
@@ -653,6 +672,8 @@ async function generateBuildArtifacts(supabaseClient: any, runId: string, brief:
       inputMethods: brief.controlType ? [brief.controlType.toLowerCase()] : coreMechanics.inputMethods || ["tap", "swipe", "drag"],
       gameType: brief.gameType || 'casual',
       controlType: brief.controlType || 'touch',
+      subgenre: brief.subgenre || 'casual',
+      visualHook: brief.visualHook || 'engaging visuals',
       progressionSystem: coreMechanics.progressionSystem || "Score-based with level progression",
       sessionStructure: { 
         targetDuration: coreMechanics.sessionLength || 90, 
@@ -792,6 +813,10 @@ GAME BRIEF:
 - Target Audience: ${brief.targetAudience}
 - Game Type: ${brief.gameType || 'casual'}
 - Control Type: ${brief.controlType || 'touch'}
+- Subgenre: ${brief.subgenre || 'casual'}
+- Visual Hook: ${brief.visualHook || 'engaging visuals'}
+- Guiding Notes: ${brief.guidingNotes || 'None provided'}
+- Reference Games: ${brief.referenceGames?.join(', ') || 'None provided'}
 
 MARKET RESEARCH:
 ${JSON.stringify(marketData.insights || {}, null, 2)}
@@ -1616,12 +1641,19 @@ Theme: ${brief.theme}
 Industry: ${brief.industry}
 Target Audience: ${brief.targetAudience || 'General'}
 Goal: ${brief.goal}
+Subgenre: ${brief.subgenre || 'casual'}
+Visual Hook: ${brief.visualHook || 'engaging visuals'}
 
 PROTOTYPE SPECIFICATIONS:
-${JSON.stringify(prototype.meta.specifications, null, 2)}
+Engine: HTML5 Canvas
+Target Resolution: 360x640
+File Size: ${prototype.meta.specifications?.fileSize || 'Unknown'}
+Features: ${prototype.meta.specifications?.features?.join(', ') || 'Standard game features'}
 
-BUILD BRIEF:
-${JSON.stringify(buildBrief, null, 2)}
+BUILD BRIEF SUMMARY:
+Core Loop: ${buildBrief.gameDesign?.coreLoop || 'Standard gameplay loop'}
+Input Methods: ${buildBrief.gameDesign?.inputMethods?.join(', ') || 'touch controls'}
+Visual Style: ${buildBrief.visualDesign?.artStyle || 'modern minimalist'}
 
 Create a comprehensive QA testing plan specifically for this completed prototype. Focus on:
 
