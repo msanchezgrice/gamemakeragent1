@@ -28,14 +28,16 @@ export default function RunDetailPage() {
         // Try direct database query first for this specific run
         console.log('🎯 RunDetailPage: Trying direct database query...');
         
-        const { data: directRun, error: directError } = await supabase
+        const { data: directRuns, error: directError } = await supabase
           .from('orchestrator_runs')
           .select(`
             *,
             blockers:orchestrator_manual_tasks(*)
           `)
           .eq('id', runId)
-          .single();
+          .limit(1);
+
+        const directRun = directRuns?.[0];
 
         if (directError) {
           console.error('❌ RunDetailPage: Direct query error:', directError);

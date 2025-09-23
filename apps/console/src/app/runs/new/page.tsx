@@ -882,6 +882,8 @@ function FormTextArea({ label, value, onChange, placeholder, required }: FormTex
         required={required}
         rows={4}
         className="w-full rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-3 text-white placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-slate-600 resize-none"
+        // Add key to prevent custom element conflicts
+        key={`textarea-${label.replace(/\s+/g, '-').toLowerCase()}`}
       />
       <div className="flex justify-between text-xs text-slate-400 mt-1">
         <span>Describe your goals and success criteria</span>
