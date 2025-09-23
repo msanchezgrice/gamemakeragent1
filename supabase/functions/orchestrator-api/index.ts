@@ -3130,9 +3130,7 @@ serve(async (req) => {
         .insert({
           brief: body.brief,
           status: 'queued',
-          phase: 'intake',
-          game_summary: gameSummary,
-          require_human_approvals: body.brief.requireHumanApprovals || false
+          phase: 'intake'
         })
         .select()
         .single()
@@ -3507,8 +3505,8 @@ serve(async (req) => {
           if (currentPhaseIndex < phaseOrder.length - 1) {
             nextPhase = phaseOrder[currentPhaseIndex + 1]
             
-            // Check if human approvals are required for this run
-            const shouldRequireHuman = run.require_human_approvals && ['synthesis', 'qa'].includes(nextPhase)
+            // Check if human approvals are required for this run (fallback to brief setting)
+            const shouldRequireHuman = (run.require_human_approvals || run.brief?.requireHumanApprovals) && ['synthesis', 'qa'].includes(nextPhase)
             if (shouldRequireHuman) {
               nextStatus = 'awaiting_human'
               
