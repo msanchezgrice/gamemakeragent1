@@ -180,6 +180,19 @@ async function createOrUpdateStep(supabaseClient: any, runId: string, phase: str
 async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase: string, brief: any) {
   console.log(`🎨 Generating artifacts for ${phase} phase of run ${runId}`)
   
+  // Check if artifacts for this phase already exist to prevent duplicates
+  const { data: existingArtifacts } = await supabaseClient
+    .from('orchestrator_artifacts')
+    .select('id')
+    .eq('run_id', runId)
+    .eq('phase', phase)
+    .limit(1);
+
+  if (existingArtifacts && existingArtifacts.length > 0) {
+    console.log(`⚠️ Artifacts already exist for ${phase} phase of run ${runId}, skipping generation`);
+    return;
+  }
+  
   // Create/update step as running
   await createOrUpdateStep(supabaseClient, runId, phase, 'running', { brief });
   
@@ -1840,20 +1853,23 @@ async function generateQACodeAnalysis(supabaseClient: any, runId: string, brief:
   // Create a temporary hosted URL for the game (for web browsing agents)
   const gameUrl = `data:text/html;base64,${btoa(prototypeCode)}`;
   
-  // Enhanced QA code analysis prompt with text editor tool
-  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game testing and code analysis. You have access to a text editor tool for detailed code examination.
+  // Enhanced QA code analysis prompt with text editor and web browser tools
+  const codeAnalysisPrompt = `You are a senior QA engineer specializing in HTML5 game testing and code analysis. You have access to text editor and web search tools for comprehensive testing.
 
 TESTING APPROACH:
 1. **TEXT EDITOR ANALYSIS**: Use the text editor tool to create and analyze the game code file
-2. **CODE REVIEW**: Systematically examine HTML, CSS, and JavaScript for bugs
-3. **GAMEPLAY SIMULATION**: Mentally simulate playing the game based on the code structure
-4. **MOBILE TESTING**: Analyze touch controls and mobile compatibility
-5. **PERFORMANCE REVIEW**: Check for optimization opportunities
+2. **WEB BROWSER TESTING**: Use web search to look up best practices and testing methodologies
+3. **CODE REVIEW**: Systematically examine HTML, CSS, and JavaScript for bugs
+4. **GAMEPLAY SIMULATION**: Actually test the game by analyzing its behavior patterns
+5. **MOBILE TESTING**: Analyze touch controls and mobile compatibility
+6. **PERFORMANCE REVIEW**: Check for optimization opportunities
 
 INSTRUCTIONS:
 1. First, use the text editor tool to create a file called "game_prototype.html" with the provided code
-2. Analyze the code structure, game logic, and potential issues
-3. Provide comprehensive QA analysis based on your examination
+2. Use web search to research current HTML5 game testing best practices if needed
+3. Analyze the code structure, game logic, and potential issues
+4. Simulate actual gameplay by following the game's event flow and logic
+5. Provide comprehensive QA analysis based on your examination
 
 GAME TO TEST:
 Game URL (for reference): ${gameUrl}
@@ -1987,38 +2003,28 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`🔑 Starting QA code analysis with Claude Sonnet 4 and web browser tools...`);
     
-    // Make LLM API call for code analysis
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', // Enhanced with gameplay simulation
-        max_tokens: 30000, // Increased for comprehensive analysis
-        temperature: 0.1, // Lower temperature for more focused analysis
-        messages: [{
-          role: 'user',
-          content: codeAnalysisPrompt
-        }],
-        tools: [{
-          type: "text_editor_20241022",
-          name: "text_editor"
-        }]
-      })
-    });
+    // Make LLM API call for code analysis using helper with retry logic
+    const llmResult = await callLLMWithTimeout(
+      'claude-sonnet-4-20250514',
+      [{ role: 'user', content: codeAnalysisPrompt }],
+      [
+        {
+          type: 'text_editor_20241022',
+          name: 'text_editor'
+        },
+        {
+          type: 'web_search_20250305',
+          name: 'web_search',
+          max_uses: 3
+        }
+      ],
+      0.1, // Lower temperature for more focused analysis
+      300000, // 5 minute timeout for comprehensive analysis
+      30000
+    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error for code analysis: ${response.status} - ${errorText}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
-    }
-
-    const llmResult = await response.json();
     const analysisText = llmResult.content[0].text;
     
     // Extract clean JSON and parse
@@ -3292,7 +3298,7 @@ serve(async (req) => {
           // Force run a specific phase
           const runId = path.split('/')[2]
           const body = await req.json()
-          const { phase } = body
+          const { phase, comments } = body
 
           console.log(`🔧 Force running ${phase} phase for run ${runId}`)
 
@@ -3305,6 +3311,24 @@ serve(async (req) => {
 
           if (fetchError) {
             throw fetchError
+          }
+
+          // If comments are provided (from rejection), store them in logs
+          if (comments) {
+            await supabaseClient
+              .from('orchestrator_logs')
+              .insert({
+                run_id: runId,
+                phase: currentRun.phase,
+                agent: 'human-reviewer',
+                level: 'info',
+                message: `Phase rejected with comments: ${comments}`,
+                thinking_trace: `Human rejection feedback for ${currentRun.phase} phase`,
+                llm_response: null,
+                created_at: new Date().toISOString()
+              });
+
+            console.log(`📝 Stored rejection comments for run ${runId}: ${comments}`);
           }
 
           // Generate artifacts for the specified phase

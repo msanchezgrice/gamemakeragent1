@@ -21,39 +21,65 @@ import { cn } from '../../../lib/utils';
 import { createRun } from '../../../lib/data-source';
 import { useToast } from '../../../components/toast-provider';
 
-// Dropdown options for enhanced intake form
-const GAME_TYPES = [
-  { value: 'runner', label: 'Endless Runner', description: 'Fast-paced running games with obstacles' },
-  { value: 'puzzle', label: 'Puzzle Game', description: 'Logic-based challenges and brain teasers' },
-  { value: 'arcade', label: 'Arcade Game', description: 'Classic arcade-style gameplay' },
-  { value: 'strategy', label: 'Strategy Game', description: 'Planning and tactical gameplay' },
-  { value: 'casual', label: 'Casual Game', description: 'Easy-to-learn, relaxing gameplay' },
-  { value: 'action', label: 'Action Game', description: 'Fast-paced action and reflexes' },
-  { value: 'simulation', label: 'Simulation', description: 'Real-world simulation games' },
-  { value: 'educational', label: 'Educational', description: 'Learning-focused games' }
+// Dropdown options based on hyper-casual design matrix CSV
+const SUBGENRE_TYPES = [
+  { value: 'Flight', label: 'Flight', description: 'Flying and soaring mechanics' },
+  { value: 'Runner', label: 'Runner', description: 'Endless running and dodging' },
+  { value: 'Arcade Idle', label: 'Arcade Idle', description: 'Idle progression with active elements' },
+  { value: 'Physics Dropper', label: 'Physics Dropper', description: 'Drop and bounce physics games' },
+  { value: 'Crowd Runner', label: 'Crowd Runner', description: 'Collect and manage crowds' },
+  { value: 'Tap-Timing', label: 'Tap-Timing', description: 'Precise timing-based tapping' },
+  { value: 'Builder-lite', label: 'Builder-lite', description: 'Simple building mechanics' },
+  { value: 'Rope Cut', label: 'Rope Cut', description: 'Cut ropes to solve puzzles' },
+  { value: 'Blaster (Shooter)', label: 'Blaster/Shooter', description: 'Shooting and aiming games' },
+  { value: 'Balancer', label: 'Balancer', description: 'Balance and equilibrium challenges' },
+  { value: 'Slicer', label: 'Slicer', description: 'Slicing and cutting mechanics' },
+  { value: 'Sorter', label: 'Sorter', description: 'Sorting and organizing gameplay' },
+  { value: 'Stacker', label: 'Stacker', description: 'Stack objects and build towers' },
+  { value: 'Platformer', label: 'Platformer', description: 'Jump and navigate platforms' },
+  { value: 'Fishing', label: 'Fishing', description: 'Fishing and catching mechanics' },
+  { value: 'Puzzler', label: 'Puzzler', description: 'Logic puzzles and brain teasers' },
+  { value: 'Painter/Filler', label: 'Painter/Filler', description: 'Fill areas with color or patterns' },
+  { value: 'Parking', label: 'Parking', description: 'Parking and maneuvering vehicles' },
+  { value: 'Digger', label: 'Digger', description: 'Digging and excavation gameplay' },
+  { value: 'Dash', label: 'Dash', description: 'Quick dash and movement mechanics' },
+  { value: 'Driving', label: 'Driving', description: 'Vehicle driving and racing' }
 ];
 
-const CONTROL_TYPES = [
-  { value: 'tap', label: 'Tap Controls', description: 'Simple tap-to-play mechanics' },
-  { value: 'swipe', label: 'Swipe Controls', description: 'Gesture-based swiping controls' },
-  { value: 'drag', label: 'Drag & Drop', description: 'Drag and drop interactions' },
-  { value: 'tilt', label: 'Tilt Controls', description: 'Device tilt/accelerometer controls' },
-  { value: 'joystick', label: 'Virtual Joystick', description: 'On-screen joystick controls' },
-  { value: 'buttons', label: 'Button Controls', description: 'Traditional button-based controls' },
-  { value: 'gesture', label: 'Gesture Controls', description: 'Complex gesture recognition' }
+const INPUT_CONTROLS = [
+  { value: 'One-tap', label: 'One-tap', description: 'Single tap controls' },
+  { value: 'Tap & Hold', label: 'Tap & Hold', description: 'Hold to activate mechanics' },
+  { value: 'Tilt/Gyro', label: 'Tilt/Gyro', description: 'Device tilting controls' },
+  { value: 'Draw Path', label: 'Draw Path', description: 'Draw lines and paths' },
+  { value: 'Drag', label: 'Drag', description: 'Drag objects and elements' },
+  { value: 'Swipe', label: 'Swipe', description: 'Swipe gestures' },
+  { value: 'Aim & Release', label: 'Aim & Release', description: 'Aim and release mechanics' }
+];
+
+const VISUAL_HOOKS = [
+  { value: 'Exploding Blocks', label: 'Exploding Blocks', description: 'Satisfying block explosions' },
+  { value: 'Crowd Multiplication', label: 'Crowd Multiplication', description: 'Growing crowd effects' },
+  { value: 'Perfect Timing Meter', label: 'Perfect Timing', description: 'Timing-based visual feedback' },
+  { value: 'Scale Growth', label: 'Scale Growth', description: 'Growing and scaling objects' },
+  { value: 'Juicy Paint Fill', label: 'Juicy Paint Fill', description: 'Satisfying paint filling' },
+  { value: 'Chain Reactions', label: 'Chain Reactions', description: 'Cascading chain effects' },
+  { value: 'Color Change', label: 'Color Change', description: 'Dynamic color transformations' },
+  { value: 'Satisfying Slice', label: 'Satisfying Slice', description: 'Smooth slicing animations' }
 ];
 
 const THEME_OPTIONS = [
-  { value: 'space', label: 'Space Adventure', description: 'Cosmic exploration and sci-fi themes' },
-  { value: 'fantasy', label: 'Fantasy World', description: 'Magic, dragons, and mythical creatures' },
-  { value: 'nature', label: 'Nature & Animals', description: 'Wildlife, forests, and natural environments' },
-  { value: 'underwater', label: 'Underwater', description: 'Ocean depths and marine life' },
-  { value: 'city', label: 'Urban City', description: 'Modern city environments and buildings' },
-  { value: 'retro', label: 'Retro/Pixel', description: 'Nostalgic pixel art and retro aesthetics' },
-  { value: 'minimalist', label: 'Minimalist', description: 'Clean, simple, geometric designs' },
-  { value: 'cartoon', label: 'Cartoon Style', description: 'Colorful, animated cartoon graphics' },
-  { value: 'abstract', label: 'Abstract Art', description: 'Artistic, non-representational visuals' },
-  { value: 'sports', label: 'Sports Theme', description: 'Athletic and competitive sports' }
+  { value: 'Nature', label: 'Nature', description: 'Natural environments and wildlife' },
+  { value: 'Sports', label: 'Sports', description: 'Athletic and competitive themes' },
+  { value: 'Underwater', label: 'Underwater', description: 'Ocean depths and marine life' },
+  { value: 'Abstract/ASMR', label: 'Abstract/ASMR', description: 'Relaxing abstract visuals' },
+  { value: 'Urban', label: 'Urban', description: 'City and urban environments' },
+  { value: 'Space', label: 'Space', description: 'Cosmic and space exploration' },
+  { value: 'Construction', label: 'Construction', description: 'Building and construction themes' },
+  { value: 'Vehicles', label: 'Vehicles', description: 'Cars, trucks, and transportation' },
+  { value: 'Fashion/Makeover', label: 'Fashion/Makeover', description: 'Style and beauty themes' },
+  { value: 'Food', label: 'Food', description: 'Cooking and food-related themes' },
+  { value: 'DIY/Crafts', label: 'DIY/Crafts', description: 'Crafting and DIY projects' },
+  { value: 'Fantasy', label: 'Fantasy', description: 'Magic and mythical themes' }
 ];
 
 interface IntakeBrief {
@@ -63,6 +89,9 @@ interface IntakeBrief {
   theme: string;
   gameType: string;
   controlType: string;
+  visualHook: string;
+  guidingNotes: string;
+  referenceGames: string[];
   competitorAnalysis: {
     enabled: boolean;
     competitors: string[];
@@ -98,6 +127,9 @@ function NewRunForm() {
     theme: '',
     gameType: '',
     controlType: '',
+    visualHook: '',
+    guidingNotes: '',
+    referenceGames: [],
     competitorAnalysis: {
       enabled: false,
       competitors: [],
@@ -193,6 +225,50 @@ function NewRunForm() {
     }));
   };
 
+  // CSV data for game recommendations
+  const csvGameData = [
+    { subgenre: 'Flight', theme: 'Nature', visualHook: 'Exploding Blocks', inputControl: 'One-tap' },
+    { subgenre: 'Runner', theme: 'Sports', visualHook: 'Exploding Blocks', inputControl: 'Tap & Hold' },
+    { subgenre: 'Arcade Idle', theme: 'Underwater', visualHook: 'Crowd Multiplication', inputControl: 'Draw Path' },
+    { subgenre: 'Physics Dropper', theme: 'Abstract/ASMR', visualHook: 'Perfect Timing Meter', inputControl: 'Tilt/Gyro' },
+    { subgenre: 'Crowd Runner', theme: 'Urban', visualHook: 'Scale Growth', inputControl: 'Tilt/Gyro' },
+    { subgenre: 'Tap-Timing', theme: 'Space', visualHook: 'Chain Reactions', inputControl: 'Tilt/Gyro' },
+    { subgenre: 'Blaster (Shooter)', theme: 'Underwater', visualHook: 'Crowd Multiplication', inputControl: 'Draw Path' },
+    { subgenre: 'Balancer', theme: 'Urban', visualHook: 'Juicy Paint Fill', inputControl: 'Tap & Hold' },
+    { subgenre: 'Slicer', theme: 'Fashion/Makeover', visualHook: 'Exploding Blocks', inputControl: 'Drag' },
+    { subgenre: 'Sorter', theme: 'Vehicles', visualHook: 'Juicy Paint Fill', inputControl: 'Tilt/Gyro' },
+    { subgenre: 'Stacker', theme: 'Nature', visualHook: 'Exploding Blocks', inputControl: 'Tap & Hold' },
+    { subgenre: 'Platformer', theme: 'Construction', visualHook: 'Juicy Paint Fill', inputControl: 'Aim & Release' },
+    { subgenre: 'Balancer', theme: 'Sports', visualHook: 'Perfect Timing Meter', inputControl: 'One-tap' },
+    { subgenre: 'Sorter', theme: 'Abstract/ASMR', visualHook: 'Scale Growth', inputControl: 'Tilt/Gyro' },
+    { subgenre: 'Fishing', theme: 'Nature', visualHook: 'Chain Reactions', inputControl: 'Draw Path' },
+    { subgenre: 'Rope Cut', theme: 'Fantasy', visualHook: 'Juicy Paint Fill', inputControl: 'Draw Path' },
+    { subgenre: 'Puzzler', theme: 'Fashion/Makeover', visualHook: 'Perfect Timing Meter', inputControl: 'Drag' },
+    { subgenre: 'Blaster (Shooter)', theme: 'Food', visualHook: 'Color Change', inputControl: 'Draw Path' },
+    { subgenre: 'Sorter', theme: 'Fashion/Makeover', visualHook: 'Scale Growth', inputControl: 'Drag' },
+    { subgenre: 'Stacker', theme: 'Fantasy', visualHook: 'Exploding Blocks', inputControl: 'Tilt/Gyro' }
+  ];
+
+  const recommendGame = () => {
+    const randomGame = csvGameData[Math.floor(Math.random() * csvGameData.length)];
+    setBrief(prev => ({
+      ...prev,
+      gameType: randomGame.subgenre,
+      controlType: randomGame.inputControl,
+      theme: randomGame.theme,
+      visualHook: randomGame.visualHook,
+      industry: 'Mobile Gaming',
+      targetAudience: 'Casual gamers',
+      goal: `Create an engaging ${randomGame.subgenre.toLowerCase()} game with ${randomGame.theme.toLowerCase()} theme featuring ${randomGame.visualHook.toLowerCase()} visual effects.`
+    }));
+    
+    addToast({
+      type: 'success',
+      title: 'Game Recommendation Applied',
+      description: `Random ${randomGame.subgenre} game concept has been loaded. Feel free to customize!`
+    });
+  };
+
   return (
     <main className="mx-auto max-w-4xl px-8 py-12">
       <header className="mb-8">
@@ -226,10 +302,20 @@ function NewRunForm() {
       >
         {/* Basic Information */}
         <section className="rounded-3xl border border-slate-800/70 bg-surface/70 p-6 backdrop-blur">
-          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Basic Information
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Basic Information
+            </h2>
+            <button
+              type="button"
+              onClick={recommendGame}
+              className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Recommend a Game
+            </button>
+          </div>
           
           <div className="grid gap-6 md:grid-cols-2">
             <FormField
@@ -247,29 +333,40 @@ function NewRunForm() {
             />
           </div>
           
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
             <FormDropdown
-              label="Game Type"
+              label="Subgenre/Play Type"
               value={brief.gameType}
               onChange={(value) => updateBrief('gameType', value)}
-              options={GAME_TYPES}
-              placeholder="Select game type"
+              options={SUBGENRE_TYPES}
+              placeholder="Select game subgenre"
               required
             />
             <FormDropdown
-              label="Control Type"
+              label="Input Control"
               value={brief.controlType}
               onChange={(value) => updateBrief('controlType', value)}
-              options={CONTROL_TYPES}
-              placeholder="Select controls"
+              options={INPUT_CONTROLS}
+              placeholder="Select input method"
               required
             />
+          </div>
+          
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
             <FormDropdown
               label="Theme"
               value={brief.theme}
               onChange={(value) => updateBrief('theme', value)}
               options={THEME_OPTIONS}
               placeholder="Select theme"
+              required
+            />
+            <FormDropdown
+              label="Visual Hook"
+              value={brief.visualHook}
+              onChange={(value) => updateBrief('visualHook', value)}
+              options={VISUAL_HOOKS}
+              placeholder="Select visual appeal"
               required
             />
           </div>
@@ -281,6 +378,24 @@ function NewRunForm() {
               onChange={(value) => updateBrief('goal', value)}
               placeholder="Describe the primary objective and success criteria for this game generation run..."
               required
+            />
+          </div>
+          
+          <div className="mt-6">
+            <FormTextArea
+              label="Guiding Notes"
+              value={brief.guidingNotes}
+              onChange={(value) => updateBrief('guidingNotes', value)}
+              placeholder="Additional guidance, constraints, or specific requirements for the game design..."
+            />
+          </div>
+          
+          <div className="mt-6">
+            <TagInput
+              label="Reference Games URLs"
+              placeholder="Add URLs to reference games for inspiration (e.g., https://example.com/game)"
+              tags={brief.referenceGames}
+              onChange={(tags) => setBrief(prev => ({ ...prev, referenceGames: tags }))}
             />
           </div>
         </section>

@@ -138,15 +138,23 @@ export function QATable({ runs }: QATableProps) {
   };
 
   const handleReject = async (runId: string) => {
+    const comments = prompt('Please provide comments for the rejection. What needs to be fixed?');
+    if (!comments) {
+      return; // User cancelled
+    }
+
     try {
-      // Move run back to build phase for fixes
+      // Move run back to build phase for fixes with comments
       const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${runId}/force-phase`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ phase: 'build' })
+        body: JSON.stringify({ 
+          phase: 'build',
+          comments: comments
+        })
       });
 
       if (response.ok) {

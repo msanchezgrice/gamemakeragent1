@@ -614,14 +614,20 @@ function StageTab({ run, selectedStage }: { run: RunRecord; onRunUpdate?: () => 
                       </button>
                       <button
                         onClick={() => {
-                          // Reject and move back to build
+                          const comments = prompt('Please provide comments for the rejection. What needs to be fixed?');
+                          if (!comments) return; // User cancelled
+                          
+                          // Reject and move back to build with comments
                           fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${run.id}/force-phase`, {
                             method: 'POST',
                             headers: {
                               'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
                               'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({ phase: 'build' })
+                            body: JSON.stringify({ 
+                              phase: 'build',
+                              comments: comments
+                            })
                           }).then(() => {
                             setTimeout(() => window.location.reload(), 1000);
                           });
