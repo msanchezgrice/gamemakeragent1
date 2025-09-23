@@ -206,7 +206,7 @@ async function createOrUpdateStep(supabaseClient: any, runId: string, phase: str
 }
 
 // Artifact generation functions
-async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase: string, brief: any) {
+async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase: string, brief: any, forceRegeneration = false) {
   console.log(`🎨 Generating artifacts for ${phase} phase of run ${runId}`)
   
   // Check if artifacts for this phase already exist to prevent duplicates
@@ -222,22 +222,12 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
     console.error(`❌ Error checking existing artifacts for ${phase}:`, checkError);
   }
 
-  if (existingArtifacts && existingArtifacts.length > 0) {
+  if (existingArtifacts && existingArtifacts.length > 0 && !forceRegeneration) {
     console.log(`⚠️ Found ${existingArtifacts.length} existing artifacts for ${phase} phase of run ${runId}:`, existingArtifacts.map(a => a.kind).join(', '));
-    
-    // Only skip if we have recent artifacts (within last 5 minutes) to allow re-generation of failed attempts
-    const recentArtifacts = existingArtifacts.filter(a => {
-      const createdTime = new Date(a.created_at).getTime();
-      const now = Date.now();
-      return (now - createdTime) < 5 * 60 * 1000; // 5 minutes
-    });
-    
-    if (recentArtifacts.length > 0) {
-      console.log(`⚠️ Skipping generation - found ${recentArtifacts.length} recent artifacts`);
-      return;
-    } else {
-      console.log(`🔄 Proceeding with generation - existing artifacts are old`);
-    }
+    console.log(`⚠️ Skipping generation - artifacts already exist for ${phase} phase (use forceRegeneration=true to override)`);
+    return;
+  } else if (existingArtifacts && existingArtifacts.length > 0 && forceRegeneration) {
+    console.log(`🔄 Force regenerating ${existingArtifacts.length} existing artifacts for ${phase} phase`);
   }
   
   // Create/update step as running
@@ -3408,8 +3398,8 @@ serve(async (req) => {
             console.log(`📝 Stored rejection comments for run ${runId}: ${comments}`);
           }
 
-          // Generate artifacts for the specified phase
-          await generatePhaseArtifacts(supabaseClient, runId, phase, currentRun.brief)
+          // Generate artifacts for the specified phase (force regeneration for manual requests)
+          await generatePhaseArtifacts(supabaseClient, runId, phase, currentRun.brief, true)
 
           // If this is a different phase than current, update the run
           if (phase !== currentRun.phase) {
