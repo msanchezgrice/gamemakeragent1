@@ -212,19 +212,32 @@ async function generatePhaseArtifacts(supabaseClient: any, runId: string, phase:
   // Check if artifacts for this phase already exist to prevent duplicates
   const { data: existingArtifacts, error: checkError } = await supabaseClient
     .from('orchestrator_artifacts')
-    .select('id, kind')
+    .select('id, kind, created_at')
     .eq('run_id', runId)
     .eq('phase', phase)
-    .limit(5);
+    .order('created_at', { ascending: false })
+    .limit(10);
 
   if (checkError) {
     console.error(`❌ Error checking existing artifacts for ${phase}:`, checkError);
   }
 
   if (existingArtifacts && existingArtifacts.length > 0) {
-    console.log(`⚠️ Artifacts already exist for ${phase} phase of run ${runId}:`, existingArtifacts.map(a => a.kind).join(', '));
-    console.log(`⚠️ Skipping generation to prevent duplicates`);
-    return;
+    console.log(`⚠️ Found ${existingArtifacts.length} existing artifacts for ${phase} phase of run ${runId}:`, existingArtifacts.map(a => a.kind).join(', '));
+    
+    // Only skip if we have recent artifacts (within last 5 minutes) to allow re-generation of failed attempts
+    const recentArtifacts = existingArtifacts.filter(a => {
+      const createdTime = new Date(a.created_at).getTime();
+      const now = Date.now();
+      return (now - createdTime) < 5 * 60 * 1000; // 5 minutes
+    });
+    
+    if (recentArtifacts.length > 0) {
+      console.log(`⚠️ Skipping generation - found ${recentArtifacts.length} recent artifacts`);
+      return;
+    } else {
+      console.log(`🔄 Proceeding with generation - existing artifacts are old`);
+    }
   }
   
   // Create/update step as running
@@ -1013,8 +1026,8 @@ Return a complete, properly formatted HTML file that creates a unique game based
         size: gameHTML.length,
         contentType: 'text/html',
         data: gameHTML,
-        playable: true,
-        gameSDKCompliant: true,
+        playable: 'true',
+        gameSDKCompliant: 'true',
         generated_at: new Date().toISOString(),
         specifications: {
           engine: 'HTML5 Canvas',
