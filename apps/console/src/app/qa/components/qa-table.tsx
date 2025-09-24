@@ -326,14 +326,17 @@ export function QATable({ runs }: QATableProps) {
                     >
                       <RefreshCw className="h-4 w-4" />
                     </button>
+                    {/* Debug: Always show buttons for testing - status: ${run.status}, phase: ${run.phase} */}
                     {(run.status === 'awaiting_human' || run.status === 'done' || run.phase === 'qa') && (
                       <>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
+                            console.log(`🔍 QA Approve clicked for run ${run.id}, status: ${run.status}, phase: ${run.phase}`);
                             handleApprove(run.id);
                           }}
                           className="px-3 py-1 bg-success text-black rounded-lg text-xs font-medium hover:bg-success/90 transition-colors flex items-center gap-1"
+                          title={`Status: ${run.status}, Phase: ${run.phase}`}
                         >
                           <CheckSquare className="h-3 w-3" />
                           {run.status === 'done' ? 'Re-approve' : 'Approve'}
@@ -341,14 +344,22 @@ export function QATable({ runs }: QATableProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
+                            console.log(`🔍 QA Reject clicked for run ${run.id}, status: ${run.status}, phase: ${run.phase}`);
                             handleReject(run.id);
                           }}
                           className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors flex items-center gap-1"
+                          title={`Status: ${run.status}, Phase: ${run.phase}`}
                         >
                           <X className="h-3 w-3" />
                           {run.status === 'done' ? 'Redo Build' : 'Reject'}
                         </button>
                       </>
+                    )}
+                    {/* Debug: Show condition result */}
+                    {!(run.status === 'awaiting_human' || run.status === 'done' || run.phase === 'qa') && (
+                      <span className="text-xs text-slate-500" title={`Status: ${run.status}, Phase: ${run.phase}`}>
+                        No buttons (status: {run.status}, phase: {run.phase})
+                      </span>
                     )}
                   </div>
                 </td>

@@ -76,7 +76,8 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
     setUploadingGames(prev => new Set([...prev, runId]));
     
     try {
-      console.log(`🎮 Uploading game ${runId} to Clipcade...`);
+      console.log(`🎮 [DEBUG] Uploading game ${runId} to Clipcade...`);
+      console.log(`🔍 [DEBUG] API endpoint: /api/upload-to-clipcade`);
       
       const response = await fetch('/api/upload-to-clipcade', {
         method: 'POST',
@@ -85,6 +86,8 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
         },
         body: JSON.stringify({ runId })
       });
+      
+      console.log(`🔍 [DEBUG] Response status: ${response.status}`);
       
       const result = await response.json();
       
