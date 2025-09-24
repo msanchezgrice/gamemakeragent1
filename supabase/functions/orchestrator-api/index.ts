@@ -3617,6 +3617,123 @@ serve(async (req) => {
       }
     }
 
+    if (method === 'POST' && path.startsWith('/runs/') && path.endsWith('/upload-to-clipcade')) {
+      // Upload game prototype to Clipcade/GameTok feed
+      const runId = path.split('/')[2];
+      
+      try {
+        console.log(`🎮 Uploading game to Clipcade for run ${runId}`);
+        
+        // Get the run and its game prototype
+        const { data: run, error: runError } = await supabaseClient
+          .from('orchestrator_runs')
+          .select('*')
+          .eq('id', runId)
+          .single();
+        
+        if (runError || !run) {
+          throw new Error(`Run not found: ${runId}`);
+        }
+        
+        // Get the game prototype artifact
+        const { data: prototypeArtifact, error: artifactError } = await supabaseClient
+          .from('orchestrator_artifacts')
+          .select('*')
+          .eq('run_id', runId)
+          .eq('kind', 'game_prototype')
+          .single();
+        
+        if (artifactError || !prototypeArtifact) {
+          throw new Error('Game prototype not found for this run');
+        }
+        
+        // Extract game metadata
+        const gameTitle = `${run.brief?.theme || 'Unknown'} ${run.brief?.gameType || 'Game'}`;
+        const gameDescription = run.brief?.goal || 'A fun mobile game created with AI';
+        const gameTheme = run.brief?.theme || 'Unknown';
+        const gameType = run.brief?.gameType || 'casual';
+        
+        // Get HTML content from artifact
+        const gameHTML = prototypeArtifact.meta?.data || '<html><body>Game not available</body></html>';
+        
+        // Create game entry for Clipcade (pending approval)
+        const gameData = {
+          title: gameTitle,
+          description: gameDescription,
+          theme: gameTheme,
+          game_type: gameType,
+          html_content: gameHTML,
+          status: 'pending', // Pending admin approval
+          source: 'multiagent_builder',
+          run_id: runId,
+          created_at: new Date().toISOString(),
+          metadata: {
+            file_size: prototypeArtifact.meta?.size || 0,
+            engine: 'HTML5 Canvas',
+            target_resolution: '360x640',
+            features: prototypeArtifact.meta?.features || [],
+            visual_hook: run.brief?.visualHook || 'Engaging gameplay',
+            control_type: run.brief?.controlType || 'touch',
+            generated_by: 'claude-opus-4-1-20250805'
+          }
+        };
+        
+        // For now, store in our database as pending games
+        // TODO: Later integrate with actual GameTok repository
+        const { data: uploadedGame, error: uploadError } = await supabaseClient
+          .from('clipcade_games')
+          .insert(gameData)
+          .select()
+          .single();
+        
+        if (uploadError) {
+          // If table doesn't exist, create it
+          if (uploadError.code === '42P01') {
+            console.log('📋 Creating clipcade_games table...');
+            
+            // Create table using direct SQL - we'll handle this via migration instead
+            console.log('⚠️ clipcade_games table does not exist - please run migration first');
+            
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'clipcade_games table not found',
+              message: 'Please create the clipcade_games table first via migration'
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500
+            });
+          }
+          
+          throw uploadError;
+        }
+        
+        console.log('✅ Game uploaded to Clipcade successfully:', uploadedGame.id);
+        
+        return new Response(JSON.stringify({
+          success: true,
+          game_id: uploadedGame.id,
+          status: 'pending',
+          message: 'Game uploaded to Clipcade and pending admin approval',
+          game_data: uploadedGame
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+        
+      } catch (error) {
+        console.error('❌ Failed to upload game to Clipcade:', error);
+        
+        return new Response(JSON.stringify({
+          success: false,
+          error: error.message,
+          message: 'Failed to upload game to Clipcade'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+    }
+
     // Route not found
     console.log('❌ Route not found:', method, path)
     return new Response(

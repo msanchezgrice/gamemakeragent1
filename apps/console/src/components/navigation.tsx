@@ -9,7 +9,8 @@ import {
   Plus,
   Activity,
   Search,
-  BarChart3
+  BarChart3,
+  Settings
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/analysis', label: 'Analysis', icon: BarChart3 },
   { href: '/runs/new', label: 'New Run', icon: Plus },
   { href: '/logs', label: 'Logs', icon: Activity },
+  { href: '/clipcade-admin', label: 'Clipcade Admin', icon: Settings },
   { href: '/debug', label: 'Debug', icon: Search },
 ];
 

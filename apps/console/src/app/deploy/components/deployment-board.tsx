@@ -66,10 +66,48 @@ const COLUMNS: Array<{
 
 export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
   const [playingGame, setPlayingGame] = useState<string | null>(null);
+  const [uploadingGames, setUploadingGames] = useState<Set<string>>(new Set());
   const groupedDeployments = COLUMNS.reduce((acc, column) => {
     acc[column.key] = deployments.filter(d => d.deploymentStatus === column.key);
     return acc;
   }, {} as Record<ColumnKey, typeof deployments>);
+
+  const handleUploadToClipcade = async (runId: string) => {
+    setUploadingGames(prev => new Set([...prev, runId]));
+    
+    try {
+      console.log(`🎮 Uploading game ${runId} to Clipcade...`);
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${runId}/upload-to-clipcade`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Game uploaded successfully:', result.game_id);
+        alert(`Game uploaded to Clipcade successfully! Game ID: ${result.game_id}\nStatus: ${result.status}`);
+        // Refresh the page to update the deployment status
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        console.error('❌ Upload failed:', result.error);
+        alert(`Failed to upload game: ${result.message || result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      alert(`Error uploading game: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setUploadingGames(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(runId);
+        return newSet;
+      });
+    }
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -102,7 +140,12 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: (columnIndex * 0.1) + (index * 0.05), duration: 0.3 }}
               >
-                <DeploymentCard deployment={deployment} onPlayGame={setPlayingGame} />
+                <DeploymentCard 
+                  deployment={deployment} 
+                  onPlayGame={setPlayingGame} 
+                  onUploadToClipcade={handleUploadToClipcade}
+                  isUploading={uploadingGames.has(deployment.id)}
+                />
               </motion.div>
             ))}
           </div>
@@ -121,10 +164,14 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
 
 function DeploymentCard({ 
   deployment,
-  onPlayGame
+  onPlayGame,
+  onUploadToClipcade,
+  isUploading
 }: { 
   deployment: DeploymentBoardProps['deployments'][0];
   onPlayGame: (id: string) => void;
+  onUploadToClipcade: (id: string) => void;
+  isUploading: boolean;
 }) {
   const variant = deployment.gameVariants[0];
   const prototypeData = deployment.prototypeData as { data?: string; size?: number } | undefined;
@@ -183,8 +230,13 @@ function DeploymentCard({
         )}
         
         {deployment.deploymentStatus === 'to_upload' && (
-          <button className="flex-1 px-3 py-2 bg-warning text-black rounded-lg text-sm font-medium hover:bg-warning/90 transition-colors">
-            Upload to Clipcade
+          <button 
+            onClick={() => onUploadToClipcade(deployment.id)}
+            disabled={isUploading}
+            className="flex-1 px-3 py-2 bg-warning text-black rounded-lg text-sm font-medium hover:bg-warning/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isUploading && <Loader className="h-3 w-3 animate-spin" />}
+            {isUploading ? 'Uploading...' : 'Upload to Clipcade'}
           </button>
         )}
         
