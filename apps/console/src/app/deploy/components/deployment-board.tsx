@@ -78,12 +78,12 @@ export function DeploymentBoard({ deployments }: DeploymentBoardProps) {
     try {
       console.log(`🎮 Uploading game ${runId} to Clipcade...`);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/orchestrator-api/runs/${runId}/upload-to-clipcade`, {
+      const response = await fetch('/api/upload-to-clipcade', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ runId })
       });
       
       const result = await response.json();

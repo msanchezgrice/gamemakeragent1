@@ -326,7 +326,7 @@ export function QATable({ runs }: QATableProps) {
                     >
                       <RefreshCw className="h-4 w-4" />
                     </button>
-                    {run.status === 'awaiting_human' && (
+                    {(run.status === 'awaiting_human' || run.status === 'done' || run.phase === 'qa') && (
                       <>
                         <button 
                           onClick={(e) => {
@@ -336,7 +336,7 @@ export function QATable({ runs }: QATableProps) {
                           className="px-3 py-1 bg-success text-black rounded-lg text-xs font-medium hover:bg-success/90 transition-colors flex items-center gap-1"
                         >
                           <CheckSquare className="h-3 w-3" />
-                          Approve
+                          {run.status === 'done' ? 'Re-approve' : 'Approve'}
                         </button>
                         <button 
                           onClick={(e) => {
@@ -346,7 +346,7 @@ export function QATable({ runs }: QATableProps) {
                           className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors flex items-center gap-1"
                         >
                           <X className="h-3 w-3" />
-                          Reject
+                          {run.status === 'done' ? 'Redo Build' : 'Reject'}
                         </button>
                       </>
                     )}
